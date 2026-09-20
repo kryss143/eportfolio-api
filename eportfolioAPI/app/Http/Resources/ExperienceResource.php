@@ -7,8 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ExperienceResource extends JsonResource
 {
-
-    public function toArray(Request $request) : array
+    public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
@@ -18,7 +17,4 @@ class ExperienceResource extends JsonResource
             'collabProjects' => $this->collabProjects,
         ];
     }
-
 }
-
-?>

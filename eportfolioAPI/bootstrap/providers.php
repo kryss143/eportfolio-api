@@ -1,8 +1,15 @@
 <?php
 
 use App\Providers\AppServiceProvider;
+use MongoDB\Laravel\MongoDBServiceProvider;
 
-return [
+$providers = [
     AppServiceProvider::class,
-    MongoDB\Laravel\MongoDBServiceProvider::class,
 ];
+
+// Only load MongoDB provider when the extension is installed
+if (extension_loaded('mongodb')) {
+    $providers[] = MongoDBServiceProvider::class;
+}
+
+return $providers;

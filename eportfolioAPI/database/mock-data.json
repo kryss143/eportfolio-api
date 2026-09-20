@@ -1,0 +1,247 @@
+{
+    "experiences": [
+        {
+            "id": "primary",
+            "position": "Full-Stack Developer",
+            "yearsOfExperience": 2,
+            "soloProjects": 2,
+            "collabProjects": 2,
+            "created_at": "2026-01-01T00:00:00.000000Z",
+            "updated_at": "2026-01-01T00:00:00.000000Z"
+        }
+    ],
+    "metrics": [
+        {
+            "id": "releases",
+            "label": "Total Projects",
+            "value": 5,
+            "suffix": null,
+            "metricDescription": "Product-style builds spanning frontend, backend, database, and deployment workflows.",
+            "created_at": "2026-01-01T00:00:00.000000Z",
+            "updated_at": "2026-01-01T00:00:00.000000Z"
+        },
+        {
+            "id": "checks",
+            "label": "Ongoing",
+            "value": 1,
+            "suffix": null,
+            "metricDescription": "Active project work that keeps the portfolio iterative and current.",
+            "created_at": "2026-01-01T00:00:00.000000Z",
+            "updated_at": "2026-01-01T00:00:00.000000Z"
+        },
+        {
+            "id": "performance",
+            "label": "Live Demo/s Available",
+            "value": 4,
+            "suffix": null,
+            "metricDescription": "Public demos recruiters can review without navigating repositories.",
+            "created_at": "2026-01-01T00:00:00.000000Z",
+            "updated_at": "2026-01-01T00:00:00.000000Z"
+        },
+        {
+            "id": "commits",
+            "label": "Total Commits",
+            "value": 289,
+            "suffix": "+",
+            "metricDescription": "Visible delivery cadence across shipped and in-progress work.",
+            "created_at": "2026-01-01T00:00:00.000000Z",
+            "updated_at": "2026-01-01T00:00:00.000000Z"
+        }
+    ],
+    "projects": [
+        {
+            "id": "mock-pms",
+            "title": "Property Management System",
+            "description": "Multi-tenant property platform for landlords, featuring role-gated dashboards, live tenant records, and end-to-end lease workflow management, built full-stack.",
+            "technologies": ["React", "Tailwind CSS", "Express.js", "Supabase", "RestAPI"],
+            "status": "built",
+            "githubLink": "https://github.com/kryss143/property-management",
+            "demoLink": "https://property-management-client.vercel.app",
+            "image": "/projects/PMS.webp",
+            "outcome": "Shipped with Supabase auth, role-gated access for landlord vs. tenant views, real-time record sync, and complete listing lifecycle management, deployed and live on Vercel.",
+            "metrics": ["2 role scopes (landlord / tenant)", "Real-time sync via Supabase Realtime", "Full CRUD across 3 entity types", "Deployed: Vercel"],
+            "featured": true,
+            "created_at": "2026-01-15T00:00:00.000000Z",
+            "updated_at": "2026-01-15T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-grabcat",
+            "title": "GrabCat",
+            "description": "Ride-booking platform for cat owners with real dispatch mechanics: route requests, driver acceptance, and a full booking state machine modelled on Grab's service flow.",
+            "technologies": ["Angular", "DaisyUI", "Express.js", ".NET", "MongoDB", "Prisma"],
+            "status": "in-progress",
+            "githubLink": "https://github.com/kryss143/grabcat",
+            "demoLink": null,
+            "image": "/projects/GrabCat.webp",
+            "outcome": "Angular UI with a full booking state machine covering request, accept, and dispatch flows backed by a custom REST API.",
+            "metrics": ["Cat booking web application", "Angular standalone components", "Custom .NET REST API", "Driver + rider role separation"],
+            "featured": false,
+            "created_at": "2026-02-01T00:00:00.000000Z",
+            "updated_at": "2026-02-01T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-recipe",
+            "title": "Recipe Finder App",
+            "description": "Vue SPA integrating the MealDB REST API with category and ingredient filtering and instant result-to-detail navigation.",
+            "technologies": ["Vue", "DaisyUI", "Back4App", "RestAPI"],
+            "status": "built",
+            "githubLink": "https://github.com/kryss143/recipe-finder-app",
+            "demoLink": "https://kryssrecipefinder.vercel.app/",
+            "image": "/projects/RecipeFinderApp.webp",
+            "outcome": "Vue SPA with MealDB integration featuring category and keyword filtering, lazy-loaded detail views, and a mobile-first layout.",
+            "metrics": ["MealDB REST API", "2 filter axes (category + ingredient)", "Mobile-first layout", "Live on Vercel"],
+            "featured": false,
+            "created_at": "2026-02-15T00:00:00.000000Z",
+            "updated_at": "2026-02-15T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-hcm",
+            "title": "Mini HCM App",
+            "description": "HR management platform for small teams with onboarding records, role-gated login, and leave and status tracking.",
+            "technologies": ["React.js", "TailwindCSS", "Express.js", "Firebase", "Firestore", "RestAPI"],
+            "status": "built",
+            "githubLink": "https://github.com/kryss143/mini-hcm-app/",
+            "demoLink": "https://mini-hcm-app.web.app/",
+            "image": "/projects/MiniHCM.webp",
+            "outcome": "Shipped Firebase Auth with admin/employee role gating, Firestore-backed records, and a React dashboard.",
+            "metrics": ["2 role scopes (admin / employee)", "Firestore real-time records", "Leave + status tracking", "Deployed: Firebase Hosting"],
+            "featured": false,
+            "created_at": "2026-03-01T00:00:00.000000Z",
+            "updated_at": "2026-03-01T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-jobledger",
+            "title": "JobLedger Job Tracker App",
+            "description": "Next.js job search dashboard: track applications across status stages and visualise your full pipeline in one view.",
+            "technologies": ["Next.js", "Next.js Server Actions", "Supabase", "RestAPI"],
+            "status": "built",
+            "githubLink": "https://github.com/kryss143/application-tracker",
+            "demoLink": "https://jobledger-app-tracker.vercel.app/",
+            "image": "/projects/JobLedger.webp",
+            "outcome": "Full-stack with Next.js Server Actions and Supabase, covering auth, application management, status tracking, and pipeline view.",
+            "metrics": ["Next.js Server Actions (no external API layer)", "Supabase auth + DB", "Multi-stage status pipeline", "Live on Vercel"],
+            "featured": false,
+            "created_at": "2026-03-15T00:00:00.000000Z",
+            "updated_at": "2026-03-15T00:00:00.000000Z"
+        }
+    ],
+    "blogs": [
+        {
+            "id": "mock-blog-1",
+            "title": "Exploring Next.js 14 App Router and Performance Improvements",
+            "excerpt": "A breakdown of App Router architecture and rendering optimizations in Next.js 14.",
+            "date": "2024-03-15",
+            "readTime": "5 min read",
+            "slug": "nextjs-app-router",
+            "content": "<p>When I started building JobLedger, I had a choice to make early: stick with the Pages Router I already knew, or commit to the App Router that Next.js 14 was pushing as the default.</p><p>The biggest shift was unlearning client-first thinking. In the Pages Router, everything was a client component unless you explicitly used getServerSideProps or getStaticProps. In the App Router, the default is the opposite.</p>",
+            "created_at": "2026-01-15T00:00:00.000000Z",
+            "updated_at": "2026-01-15T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-blog-2",
+            "title": "Scaling React Applications with TypeScript Architecture",
+            "excerpt": "How TypeScript improves maintainability and structure in large React codebases.",
+            "date": "2024-03-10",
+            "readTime": "8 min read",
+            "slug": "scaling-react-typescript",
+            "content": "<p>At Alliance Software, I worked on an enterprise web platform used across multiple departments daily. The codebase was large enough that understanding a component's expected props required good documentation.</p><p>The architectural pattern that made the biggest difference was co-locating types with the features that own them.</p>",
+            "created_at": "2026-02-01T00:00:00.000000Z",
+            "updated_at": "2026-02-01T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-blog-3",
+            "title": "Designing Scalable Responsive UI Systems with Tailwind CSS",
+            "excerpt": "Approaches to building consistent, reusable, and responsive design systems.",
+            "date": "2024-03-05",
+            "readTime": "6 min read",
+            "slug": "scalable-ui-tailwind",
+            "content": "<p>When I built 10+ reusable React component modules at Alliance Software for an enterprise platform, consistency was the constraint I underestimated.</p><p>The pattern I settled on was building layout-agnostic components.</p>",
+            "created_at": "2026-02-15T00:00:00.000000Z",
+            "updated_at": "2026-02-15T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-blog-4",
+            "title": "Designing State Logic with React Hooks in Production Apps",
+            "excerpt": "Practical patterns for managing complex state using React Hooks.",
+            "date": "2024-03-01",
+            "readTime": "7 min read",
+            "slug": "react-hooks-state-logic",
+            "content": "<p>State management decisions age poorly when they're made too early. On the Mini HCM App, I started with local component state because the scope felt small.</p><p>The custom hook pattern changed how I approached feature development.</p>",
+            "created_at": "2026-03-01T00:00:00.000000Z",
+            "updated_at": "2026-03-01T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-blog-5",
+            "title": "Production Deployment Workflows for Next.js on Vercel",
+            "excerpt": "Strategies for deploying and maintaining Next.js apps in production environments.",
+            "date": "2024-02-25",
+            "readTime": "4 min read",
+            "slug": "nextjs-vercel-deployment",
+            "content": "<p>Achieving zero rollbacks across 20+ production releases at Alliance Software wasn't an accident: it came from owning the full CI/CD cycle deliberately.</p><p>The most valuable operational habit I built was treating deployment configuration as code.</p>",
+            "created_at": "2026-03-10T00:00:00.000000Z",
+            "updated_at": "2026-03-10T00:00:00.000000Z"
+        },
+        {
+            "id": "mock-blog-6",
+            "title": "Designing Scalable REST APIs with Node.js and Express Architecture",
+            "excerpt": "Core principles behind building maintainable and scalable backend APIs.",
+            "date": "2024-02-20",
+            "readTime": "10 min read",
+            "slug": "rest-api-node-express",
+            "content": "<p>When I architected the KeyNest Property Management System, the API wasn't an afterthought: it was the foundation I designed before writing a single React component.</p><p>The middleware pattern was the most important architectural decision I made on the backend.</p>",
+            "created_at": "2026-03-15T00:00:00.000000Z",
+            "updated_at": "2026-03-15T00:00:00.000000Z"
+        }
+    ],
+    "skills": [
+        {
+            "id": "mock-skills",
+            "proficient": ["JavaScript", "TypeScript", "React", "Vue", "Node.js", "Express.js", "HTML5", "CSS3", "TailwindCSS", "PostgreSQL", "SQL", "REST API Design", "Git", "GitHub", "Responsive Design", "Firebase", "Firestore"],
+            "familiar": ["Next.js", "Angular", "PHP", "Laravel", "Redux", "MongoDB", "Supabase", "MySQL", "Pinia", "Context API", "Python", "C#", ".NET", ".NET Core", "Nuxt.js", "Jest", "Vitest", "Docker", "Svelte"],
+            "authentication": ["Firebase Authentication", "JWT", "Session Management", "Role-Based Access Control (RBAC)", "CORS", "Input Validation", "Middleware Patterns"],
+            "architecture": ["Lazy Loading", "Code Splitting", "Async/Await", "State Management", "MVC Pattern", "Clean Architecture", "API Integration", "Error Handling"],
+            "toolsPlatforms": ["GitHub Actions", "Vercel", "Firebase Hosting", "Render", "Postman", "Netlify", "Microsoft Azure DevOps", "Mendix (Certified Intermediate Developer)"],
+            "practices": ["Agile/Scrum", "CI/CD", "Mobile-First Responsive Design", "Version Control", "Manual QA", "Cross-Browser Testing", "Code Review", "Code Refactoring"],
+            "ai": ["GitHub Copilot", "Claude", "Cursor", "Bolt"],
+            "created_at": "2026-01-01T00:00:00.000000Z",
+            "updated_at": "2026-01-01T00:00:00.000000Z"
+        }
+    ],
+    "tech_skills": [
+        {"id": "mock-ts-1", "category": "frontend", "logo": "./devicons/react-original.svg", "label": "React"},
+        {"id": "mock-ts-2", "category": "frontend", "logo": "./devicons/angular-original.svg", "label": "Angular"},
+        {"id": "mock-ts-3", "category": "frontend", "logo": "./devicons/vuejs-original.svg", "label": "Vue"},
+        {"id": "mock-ts-4", "category": "frontend", "logo": "./devicons/svelte-original.svg", "label": "Svelte"},
+        {"id": "mock-ts-5", "category": "frontend", "logo": "./devicons/tailwindcss-original.svg", "label": "TailwindCSS"},
+        {"id": "mock-ts-6", "category": "backend", "logo": "./devicons/express-original.svg", "label": "Express.js"},
+        {"id": "mock-ts-7", "category": "backend", "logo": "./devicons/php-original.svg", "label": "PHP"},
+        {"id": "mock-ts-8", "category": "backend", "logo": "./devicons/nodejs-original.svg", "label": "Node.js"},
+        {"id": "mock-ts-9", "category": "backend", "logo": "./devicons/python-original.svg", "label": "Python"},
+        {"id": "mock-ts-10", "category": "backend", "logo": "./devicons/csharp-original.svg", "label": "C#"},
+        {"id": "mock-ts-11", "category": "backend", "logo": "./devicons/dot-net-original.svg", "label": ".NET"},
+        {"id": "mock-ts-12", "category": "backend", "logo": "./devicons/dotnetcore-original.svg", "label": ".NET Core"},
+        {"id": "mock-ts-13", "category": "fullstack", "logo": "./devicons/nextjs-original.svg", "label": "Next.js"},
+        {"id": "mock-ts-14", "category": "fullstack", "logo": "./devicons/nuxtjs-original.svg", "label": "Nuxt.js"},
+        {"id": "mock-ts-15", "category": "fullstack", "logo": "./devicons/laravel-original.svg", "label": "Laravel"},
+        {"id": "mock-ts-16", "category": "cicd", "logo": "./devicons/azuredevops-original.svg", "label": "Microsoft Azure DevOps"},
+        {"id": "mock-ts-17", "category": "cicd", "logo": "./devicons/githubactions-original.svg", "label": "GitHub Actions"},
+        {"id": "mock-ts-18", "category": "cicd", "logo": "./devicons/docker-original.svg", "label": "Docker"},
+        {"id": "mock-ts-19", "category": "ai", "logo": "./devicons/copilot-original.svg", "label": "GitHub Copilot"},
+        {"id": "mock-ts-20", "category": "ai", "logo": "./devicons/claude-original.svg", "label": "Claude"},
+        {"id": "mock-ts-21", "category": "ai", "logo": "./devicons/cursor-original.svg", "label": "Cursor"},
+        {"id": "mock-ts-22", "category": "ai", "logo": "./devicons/bolt-original.svg", "label": "Bolt"},
+        {"id": "mock-ts-23", "category": "database", "logo": "./devicons/sqldeveloper-original.svg", "label": "SQL"},
+        {"id": "mock-ts-24", "category": "database", "logo": "./devicons/mysql-original.svg", "label": "MySQL"},
+        {"id": "mock-ts-25", "category": "database", "logo": "./devicons/postgresql-original.svg", "label": "PostgreSQL"},
+        {"id": "mock-ts-26", "category": "database", "logo": "./devicons/mongodb-original.svg", "label": "MongoDB"},
+        {"id": "mock-ts-27", "category": "database", "logo": "./devicons/firebase-original.svg", "label": "Firebase"},
+        {"id": "mock-ts-28", "category": "deploy", "logo": "./devicons/vercel-original.svg", "label": "Vercel"},
+        {"id": "mock-ts-29", "category": "deploy", "logo": "./devicons/netlify-original.svg", "label": "Netlify"},
+        {"id": "mock-ts-30", "category": "deploy", "logo": "./devicons/github-original.svg", "label": "GitHub"},
+        {"id": "mock-ts-31", "category": "deploy", "logo": "./devicons/git-original.svg", "label": "Git"},
+        {"id": "mock-ts-32", "category": "fundamental", "logo": "./devicons/html5-original.svg", "label": "HTML5"},
+        {"id": "mock-ts-33", "category": "fundamental", "logo": "./devicons/css3-original.svg", "label": "CSS3"},
+        {"id": "mock-ts-34", "category": "fundamental", "logo": "./devicons/javascript-original.svg", "label": "JavaScript"},
+        {"id": "mock-ts-35", "category": "fundamental", "logo": "./devicons/typescript-original.svg", "label": "TypeScript"}
+    ]
+}

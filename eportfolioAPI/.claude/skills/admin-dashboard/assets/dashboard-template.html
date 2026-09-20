@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orders admin</title>
+<style>
+  :root {
+    --bg:#f6f7f8; --surface:#ffffff; --raised:#eef0f2; --border:#dcdfe3;
+    --text:#16191d; --muted:#5b636d; --accent:#0f6b63; --accent-ink:#ffffff;
+    --success:#1a7f4b; --warning:#a15c00; --danger:#b42318; --info:#2456b3;
+    --focus:#2456b3;
+    --radius-control:6px; --radius-panel:10px;
+    --font: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --sidebar:240px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#0f1214; --surface:#171b1f; --raised:#20252a; --border:#2d343b;
+      --text:#e7eaee; --muted:#9aa4af; --accent:#3fb8ab; --accent-ink:#06211e;
+      --success:#4cc38a; --warning:#e5a13a; --danger:#f1837a; --info:#7aa7f0; --focus:#7aa7f0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#0f1214; --surface:#171b1f; --raised:#20252a; --border:#2d343b;
+    --text:#e7eaee; --muted:#9aa4af; --accent:#3fb8ab; --accent-ink:#06211e;
+    --success:#4cc38a; --warning:#e5a13a; --danger:#f1837a; --info:#7aa7f0; --focus:#7aa7f0;
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    margin:0; background:var(--bg); color:var(--text); font:14px/1.5 var(--font);
+    font-variant-numeric: tabular-nums;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  :focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  button, input, select { font:inherit; color:inherit; }
+  .skip { position:absolute; left:-999px; top:8px; background:var(--accent); color:var(--accent-ink); padding:8px 12px; border-radius:var(--radius-control); z-index:100; }
+  .skip:focus { left:8px; }
+
+  .app { display:grid; grid-template-columns:var(--sidebar) 1fr; min-height:100%; }
+  .app.collapsed { --sidebar:64px; }
+
+  /* Sidebar */
+  .sidebar { background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; height:100dvh; overflow:hidden; }
+  .brand { display:flex; align-items:center; gap:10px; padding:16px; font-weight:650; font-size:16px; white-space:nowrap; }
+  .brand-mark { width:24px; height:24px; border-radius:6px; background:var(--accent); flex:none; }
+  .nav { padding:8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; flex:1; }
+  .nav-group { color:var(--muted); font-size:12px; padding:12px 10px 4px; }
+  .nav a { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:var(--radius-control); color:var(--text); text-decoration:none; white-space:nowrap; }
+  .nav a:hover { background:var(--raised); }
+  .nav a[aria-current="page"] { background:var(--raised); font-weight:600; box-shadow: inset 3px 0 0 var(--accent); }
+  .ico { width:18px; height:18px; flex:none; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .badge { margin-left:auto; background:var(--danger); color:var(--surface); border-radius:999px; padding:0 7px; font-size:12px; }
+  .collapsed .label, .collapsed .nav-group, .collapsed .badge, .collapsed .brand span { display:none; }
+  .side-foot { border-top:1px solid var(--border); padding:8px; }
+
+  /* Main */
+  .main-col { min-width:0; display:flex; flex-direction:column; }
+  .topbar { position:sticky; top:env(safe-area-inset-top,0px); z-index:20; height:56px; display:flex; align-items:center; gap:12px; padding:0 20px; background:var(--surface); border-bottom:1px solid var(--border); }
+  .icon-btn { background:none; border:1px solid transparent; border-radius:var(--radius-control); width:36px; height:36px; display:grid; place-items:center; cursor:pointer; }
+  .icon-btn:hover { background:var(--raised); }
+  .search { flex:1; max-width:420px; position:relative; }
+  .search input { width:100%; height:36px; padding:0 40px 0 12px; border:1px solid var(--border); border-radius:var(--radius-control); background:var(--bg); }
+  .search kbd { position:absolute; right:8px; top:7px; font:12px var(--font); color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:0 6px; }
+  .spacer { flex:1; }
+  .avatar { width:32px; height:32px; border-radius:50%; background:var(--raised); display:grid; place-items:center; font-weight:600; font-size:12px; border:1px solid var(--border); }
+
+  main { padding:24px 20px 48px; max-width:1400px; width:100%; }
+  .page-head { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  h1 { font-size:24px; line-height:1.2; margin:0; font-weight:650; }
+  .sub { color:var(--muted); margin:4px 0 0; }
+  .btn { height:36px; padding:0 14px; border-radius:var(--radius-control); border:1px solid var(--border); background:var(--surface); cursor:pointer; }
+  .btn:hover { background:var(--raised); }
+  .btn.primary { background:var(--accent); color:var(--accent-ink); border-color:transparent; font-weight:600; }
+  .btn.primary:hover { filter:brightness(1.08); }
+  .btn.danger { color:var(--danger); }
+
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-panel); }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); gap:12px; flex-wrap:wrap; }
+  .panel-head h2 { font-size:15px; margin:0; font-weight:650; }
+  .panel-body { padding:16px; }
+
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  .kpi { padding:14px 16px; }
+  .kpi .k-label { color:var(--muted); }
+  .kpi .k-value { font-size:26px; font-weight:650; line-height:1.3; }
+  .delta { font-size:13px; }
+  .delta.good { color:var(--success); } .delta.bad { color:var(--danger); }
+  .delta small { color:var(--muted); }
+
+  .grid-2 { display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-bottom:16px; }
+  .attention { list-style:none; margin:0; padding:0; }
+  .attention li { display:flex; justify-content:space-between; gap:8px; padding:10px 16px; border-bottom:1px solid var(--border); }
+  .attention li:last-child { border-bottom:0; }
+  .attention a { color:var(--text); }
+
+  /* Table */
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border); }
+  .toolbar input[type=search], .toolbar select { height:34px; border:1px solid var(--border); background:var(--bg); border-radius:var(--radius-control); padding:0 10px; }
+  .chip { display:inline-flex; align-items:center; gap:6px; background:var(--raised); border:1px solid var(--border); border-radius:999px; padding:2px 4px 2px 10px; font-size:13px; }
+  .chip button { border:0; background:none; cursor:pointer; width:20px; height:20px; border-radius:50%; }
+  .chip button:hover { background:var(--border); }
+  .bulk { display:none; align-items:center; gap:12px; padding:8px 16px; background:var(--raised); border-bottom:1px solid var(--border); }
+  .bulk.on { display:flex; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; min-width:720px; }
+  th, td { text-align:left; padding:0 16px; height:44px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  th { position:sticky; top:0; background:var(--surface); font-weight:600; color:var(--muted); font-size:13px; }
+  th button { background:none; border:0; cursor:pointer; font-weight:600; color:inherit; padding:0; }
+  td.num, th.num { text-align:right; }
+  tbody tr:hover { background:color-mix(in srgb, var(--raised) 60%, transparent); }
+  td .name { font-weight:600; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:1px 9px; border-radius:999px; border:1px solid var(--border); font-size:12px; }
+  .pill::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .pill.success { color:var(--success); } .pill.warning { color:var(--warning); }
+  .pill.danger { color:var(--danger); } .pill.info { color:var(--info); }
+  .pill span { color:var(--text); }
+  .foot { display:flex; justify-content:space-between; align-items:center; padding:10px 16px; color:var(--muted); gap:8px; flex-wrap:wrap; }
+
+  .state { padding:40px 16px; text-align:center; color:var(--muted); display:none; }
+  .state strong { display:block; color:var(--text); margin-bottom:4px; }
+  .state .btn { margin-top:12px; }
+  .skeleton { display:none; padding:8px 16px; }
+  .skeleton i { display:block; height:16px; margin:14px 0; border-radius:4px; background:var(--raised); animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity:.5; } }
+  [data-view="loading"] .skeleton { display:block; } [data-view="loading"] .scroll, [data-view="loading"] .foot { display:none; }
+  [data-view="empty"] .state.empty { display:block; } [data-view="empty"] .scroll, [data-view="empty"] .foot { display:none; }
+  [data-view="error"] .state.error { display:block; } [data-view="error"] .scroll, [data-view="error"] .foot { display:none; }
+
+  dialog { border:1px solid var(--border); border-radius:var(--radius-panel); background:var(--surface); color:var(--text); padding:20px; max-width:420px; }
+  dialog::backdrop { background:rgba(0,0,0,.5); }
+  dialog h3 { margin:0 0 8px; } dialog .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+  .toast { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px)); background:var(--text); color:var(--bg); padding:10px 14px; border-radius:var(--radius-control); display:none; gap:12px; align-items:center; z-index:50; }
+  .toast.on { display:flex; } .toast button { background:none; border:0; color:inherit; text-decoration:underline; cursor:pointer; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+  @media (max-width: 1100px) { .kpis { grid-template-columns:repeat(2,1fr); } .grid-2 { grid-template-columns:1fr; } }
+  @media (max-width: 900px) {
+    .app { grid-template-columns:1fr; }
+    .sidebar { position:fixed; left:0; top:0; width:260px; z-index:60; transform:translateX(-100%); transition:transform .2s; }
+    .app.open .sidebar { transform:none; }
+    .app.collapsed { --sidebar:240px; }
+    .collapsed .label, .collapsed .nav-group, .collapsed .badge, .collapsed .brand span { display:revert; }
+  }
+  @media (max-width: 560px) { .kpis { grid-template-columns:1fr; } .search kbd { display:none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="app" id="app">
+  <aside class="sidebar" aria-label="Sidebar">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"></div><span>Harbor Goods</span></div>
+    <nav class="nav" aria-label="Main">
+      <a href="#" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg><span class="label">Overview</span></a>
+      <div class="nav-group">Sales</div>
+      <a href="#"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6h15l-2 9H8L6 3H3M9 20a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z"/></svg><span class="label">Orders</span><span class="badge" aria-label="4 need review">4</span></a>
+      <a href="#"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l9 5v8l-9 5-9-5V8z"/></svg><span class="label">Products</span></a>
+      <a href="#"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M17 4a4 4 0 010 8M22 21c0-3-2-5-4-5.5"/></svg><span class="label">Customers</span></a>
+      <div class="nav-group">Settings</div>
+      <a href="#"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg><span class="label">Store settings</span></a>
+    </nav>
+    <div class="side-foot"><button class="icon-btn" id="collapse" aria-label="Collapse sidebar" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <button class="icon-btn" id="menu" aria-label="Open menu"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div class="search"><label class="sr" for="gsearch">Search everything</label><input id="gsearch" type="search" placeholder="Search orders, customers, products"><kbd aria-hidden="true">/</kbd></div>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="theme" aria-label="Toggle dark mode"><svg class="ico" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1110 4a7 7 0 0010 10z"/></svg></button>
+      <div class="avatar" role="img" aria-label="Signed in as Maya Reyes">MR</div>
+    </header>
+
+    <main id="main">
+      <div class="page-head">
+        <div>
+          <h1>Overview</h1>
+          <p class="sub">Store performance for the last 30 days. Updated 3 min ago.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select class="btn" aria-label="Date range"><option>Last 30 days</option><option>Last 7 days</option><option>Today</option></select>
+          <button class="btn primary">Create order</button>
+        </div>
+      </div>
+
+      <section class="kpis" aria-label="Key metrics">
+        <div class="panel kpi"><div class="k-label">Revenue</div><div class="k-value">$48,210</div><div class="delta good">▲ +8.4% <small>vs previous 30 days</small></div></div>
+        <div class="panel kpi"><div class="k-label">Orders</div><div class="k-value">1,284</div><div class="delta good">▲ +5.1% <small>vs previous 30 days</small></div></div>
+        <div class="panel kpi"><div class="k-label">Refund rate</div><div class="k-value">2.7%</div><div class="delta bad">▲ +0.6 pts <small>vs previous 30 days</small></div></div>
+        <div class="panel kpi"><div class="k-label">Avg. fulfilment time</div><div class="k-value">1.8 days</div><div class="delta good">▼ −0.3 days <small>vs previous 30 days</small></div></div>
+      </section>
+
+      <div class="grid-2">
+        <section class="panel" aria-labelledby="rev-h">
+          <div class="panel-head"><h2 id="rev-h">Revenue, last 30 days (USD)</h2><button class="btn" id="toggle-table" aria-pressed="false">View as table</button></div>
+          <div class="panel-body">
+            <svg id="chart" viewBox="0 0 640 220" width="100%" role="img" aria-label="Line chart of daily revenue, rising from about $1,300 to $1,900 with a dip in week three"></svg>
+            <table id="chart-table" class="sr"><caption>Weekly revenue</caption><thead><tr><th>Week</th><th>Revenue</th></tr></thead><tbody><tr><td>Week 1</td><td>$10,900</td></tr><tr><td>Week 2</td><td>$12,300</td></tr><tr><td>Week 3</td><td>$11,200</td></tr><tr><td>Week 4</td><td>$13,810</td></tr></tbody></table>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="att-h">
+          <div class="panel-head"><h2 id="att-h">Needs attention</h2></div>
+          <ul class="attention">
+            <li><a href="#">4 orders awaiting payment review</a><span class="pill warning"><span>Review</span></span></li>
+            <li><a href="#">2 refunds pending approval</a><span class="pill warning"><span>Pending</span></span></li>
+            <li><a href="#">Ceramic pour-over set: 3 left</a><span class="pill danger"><span>Low stock</span></span></li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="panel" aria-labelledby="ord-h">
+        <div class="panel-head"><h2 id="ord-h">Recent orders</h2>
+          <label class="sr" for="demo-state">Preview state</label>
+          <select id="demo-state" class="btn" title="Preview a data state (remove in production)"><option value="ready">State: loaded</option><option value="loading">State: loading</option><option value="empty">State: empty</option><option value="error">State: error</option></select>
+        </div>
+        <div class="toolbar">
+          <label class="sr" for="tsearch">Search orders</label>
+          <input id="tsearch" type="search" placeholder="Search by order or customer">
+          <label class="sr" for="tstatus">Status</label>
+          <select id="tstatus"><option value="">All statuses</option><option>Paid</option><option>Pending</option><option>Failed</option><option>Shipped</option></select>
+          <span id="chips"></span>
+        </div>
+        <div class="bulk" id="bulk" role="status"><strong id="bulk-n">0 selected</strong><button class="btn" id="bulk-clear">Clear</button><button class="btn danger" id="bulk-del">Cancel orders</button></div>
+        <div data-view="ready" id="table-wrap">
+          <div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="state empty"><strong>No orders match these filters</strong>Try a different status or clear your filters.<br><button class="btn" id="clear-filters">Clear filters</button></div>
+          <div class="state error" role="alert"><strong>Orders couldn't be loaded</strong>The server didn't respond. Check your connection and try again.<br><button class="btn primary" id="retry">Retry</button></div>
+          <div class="scroll">
+            <table>
+              <thead><tr>
+                <th style="width:44px"><input type="checkbox" id="sel-all" aria-label="Select all orders"></th>
+                <th aria-sort="none"><button data-sort="id">Order</button></th>
+                <th aria-sort="none"><button data-sort="customer">Customer</button></th>
+                <th>Status</th>
+                <th class="num" aria-sort="none"><button data-sort="total">Total</button></th>
+                <th class="num">Placed</th>
+                <th><span class="sr">Actions</span></th>
+              </tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div class="foot"><span id="count"></span><span>Page 1 of 1</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlg-t">
+  <h3 id="dlg-t">Cancel orders</h3>
+  <p id="dlg-b">This cancels the selected orders and notifies the customers.</p>
+  <div class="actions"><button class="btn" id="dlg-no" autofocus>Keep orders</button><button class="btn danger" id="dlg-yes">Cancel orders</button></div>
+</dialog>
+<div class="toast" id="toast" role="status"><span id="toast-t"></span><button id="toast-undo">Undo</button></div>
+
+<script>
+const orders = [
+  {id:1042, customer:"Amara Okafor", status:"Paid", total:86.40, placed:"Sep 20"},
+  {id:1041, customer:"Jonas Lindqvist", status:"Pending", total:129.00, placed:"Sep 20"},
+  {id:1040, customer:"Priya Nair", status:"Shipped", total:54.90, placed:"Sep 19"},
+  {id:1039, customer:"Diego Alvarez", status:"Failed", total:212.15, placed:"Sep 19"},
+  {id:1038, customer:"Hana Sato", status:"Paid", total:37.00, placed:"Sep 18"},
+  {id:1037, customer:"Tomás Herrera", status:"Shipped", total:98.75, placed:"Sep 18"},
+];
+const tone = {Paid:"success", Pending:"warning", Failed:"danger", Shipped:"info"};
+const $ = s => document.querySelector(s);
+let sort = {key:"id", dir:-1}, selected = new Set(), lastRemoved = null;
+const fmt = new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"});
+
+function visible() {
+  const q = $("#tsearch").value.trim().toLowerCase(), st = $("#tstatus").value;
+  return orders.filter(o => (!st || o.status===st) && (!q || (o.id+" "+o.customer).toLowerCase().includes(q)))
+    .sort((a,b) => (a[sort.key] > b[sort.key] ? 1 : -1) * sort.dir);
+}
+function render() {
+  const list = visible();
+  $("#rows").innerHTML = list.map(o => `<tr>
+    <td><input type="checkbox" data-id="${o.id}" aria-label="Select order #${o.id}" ${selected.has(o.id)?"checked":""}></td>
+    <td class="name">#${o.id}</td><td>${o.customer}</td>
+    <td><span class="pill ${tone[o.status]}"><span>${o.status}</span></span></td>
+    <td class="num">${fmt.format(o.total)}</td><td class="num">${o.placed}</td>
+    <td><button class="icon-btn" aria-label="Actions for order #${o.id}">⋯</button></td></tr>`).join("");
+  $("#count").textContent = `Showing ${list.length} of ${orders.length} orders`;
+  const wrap = $("#table-wrap"), forced = $("#demo-state").value;
+  wrap.dataset.view = forced !== "ready" ? forced : (list.length ? "ready" : "empty");
+  $("#chips").innerHTML = $("#tstatus").value ? `<span class="chip">Status: ${$("#tstatus").value}<button aria-label="Remove filter: status is ${$("#tstatus").value}" data-chip>×</button></span>` : "";
+  $("#bulk").classList.toggle("on", selected.size>0);
+  $("#bulk-n").textContent = `${selected.size} selected`;
+  document.querySelectorAll("[data-sort]").forEach(b => b.parentElement.setAttribute("aria-sort", b.dataset.sort===sort.key ? (sort.dir>0?"ascending":"descending") : "none"));
+}
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-sort]");
+  if (s) { sort = {key:s.dataset.sort, dir: sort.key===s.dataset.sort ? -sort.dir : 1}; render(); }
+  if (e.target.closest("[data-chip]") || e.target.id==="clear-filters") { $("#tstatus").value=""; $("#tsearch").value=""; render(); }
+});
+$("#rows").addEventListener("change", e => { const id=+e.target.dataset.id; e.target.checked ? selected.add(id) : selected.delete(id); render(); });
+$("#sel-all").addEventListener("change", e => { visible().forEach(o => e.target.checked ? selected.add(o.id) : selected.delete(o.id)); render(); });
+["#tsearch","#tstatus","#demo-state"].forEach(s => $(s).addEventListener("input", render));
+$("#retry").addEventListener("click", () => { $("#demo-state").value="ready"; render(); });
+$("#bulk-clear").addEventListener("click", () => { selected.clear(); render(); });
+
+// Destructive action: confirm, then toast with Undo
+$("#bulk-del").addEventListener("click", () => { $("#dlg-b").textContent = `This cancels ${selected.size} order(s) and notifies the customers.`; $("#dlg").showModal(); });
+$("#dlg-no").addEventListener("click", () => $("#dlg").close());
+$("#dlg-yes").addEventListener("click", () => {
+  $("#dlg").close();
+  lastRemoved = orders.filter(o => selected.has(o.id));
+  lastRemoved.forEach(o => o.status = "Failed"); // demo: mark as cancelled/failed
+  const n = selected.size; selected.clear(); render();
+  $("#toast-t").textContent = `${n} order(s) cancelled`; $("#toast").classList.add("on");
+  setTimeout(() => $("#toast").classList.remove("on"), 5000);
+});
+$("#toast-undo").addEventListener("click", () => { $("#toast").classList.remove("on"); render(); });
+
+// Shell behaviour
+const app = $("#app");
+$("#collapse").addEventListener("click", e => { const c = app.classList.toggle("collapsed"); e.currentTarget.setAttribute("aria-pressed", c); });
+$("#menu").addEventListener("click", () => app.classList.toggle("open"));
+$("#theme").addEventListener("click", () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  document.documentElement.dataset.theme = cur === "dark" ? "light" : "dark";
+});
+document.addEventListener("keydown", e => {
+  if ((e.key==="/" && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) || ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="k")) { e.preventDefault(); $("#gsearch").focus(); }
+});
+
+// Chart (inline SVG, no dependencies). Replace data with real series.
+(function chart(){
+  const data=[1300,1350,1420,1380,1450,1500,1480,1420,1390,1350,1300,1280,1340,1400,1520,1580,1610,1560,1600,1650,1700,1690,1720,1780,1800,1760,1830,1870,1900,1880];
+  const W=640,H=220,p={l:48,r:12,t:12,b:24}, min=1000,max=2000;
+  const x=i=>p.l+i*(W-p.l-p.r)/(data.length-1), y=v=>p.t+(1-(v-min)/(max-min))*(H-p.t-p.b);
+  let g=""; [1000,1250,1500,1750,2000].forEach(v=>{ g+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--border)"/><text x="${p.l-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">$${(v/1000).toFixed(2).replace(/\.?0+$/,"")}k</text>`; });
+  const d=data.map((v,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  $("#chart").innerHTML = g + `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/><text x="${p.l}" y="${H-4}" font-size="11" fill="var(--muted)">Aug 22</text><text x="${W-p.r}" y="${H-4}" text-anchor="end" font-size="11" fill="var(--muted)">Sep 20</text>`;
+})();
+$("#toggle-table").addEventListener("click", e => {
+  const on = e.currentTarget.getAttribute("aria-pressed")==="false";
+  e.currentTarget.setAttribute("aria-pressed", on); e.currentTarget.textContent = on ? "View as chart" : "View as table";
+  $("#chart").style.display = on ? "none" : ""; $("#chart-table").classList.toggle("sr", !on);
+});
+render();
+</script>
+</body>
+</html>

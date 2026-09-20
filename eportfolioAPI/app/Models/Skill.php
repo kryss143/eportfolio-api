@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use MongoDB\Laravel\Eloquent\Model;
- 
+
 class Skill extends Model
 {
     protected $connection = 'mongodb';
+
     protected $collection = 'skills';
- 
+
     protected $fillable = [
         'proficient',
         'familiar',
@@ -18,7 +19,7 @@ class Skill extends Model
         'practices',
         'ai',
     ];
- 
+
     protected $casts = [
         'proficient' => 'array',
         'familiar' => 'array',
@@ -29,5 +30,3 @@ class Skill extends Model
         'ai' => 'array',
     ];
 }
-
-?>

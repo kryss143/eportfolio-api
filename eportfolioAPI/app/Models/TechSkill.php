@@ -7,9 +7,9 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class TechSkill extends Model
 {
-
     protected $connection = 'mongodb';
-    protected $collection = 'skills';
+
+    protected $collection = 'tech_skills';
 
     protected $fillable = [
         'category',
@@ -20,7 +20,4 @@ class TechSkill extends Model
     protected $casts = [
         'category' => TechCategory::class,
     ];
-
 }
-
-?>

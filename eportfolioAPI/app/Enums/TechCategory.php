@@ -10,10 +10,10 @@ enum TechCategory: string
 {
     case Frontend = 'frontend';
     case Backend = 'backend';
+    case Fullstack = 'fullstack';
+    case CICD = 'cicd';
+    case AI = 'ai';
     case Database = 'database';
-    case DevOps = 'devops';
-    case Tooling = 'tooling';
-    case Other = 'other';
+    case Deploy = 'deploy';
+    case Fundamental = 'fundamental';
 }
-
-?>

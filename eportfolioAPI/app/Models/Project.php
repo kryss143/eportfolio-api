@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectStatus;
 use MongoDB\Laravel\Eloquent\Model;
 
-class Projects extends Model
+class Project extends Model
 {
     protected $connection = 'mongodb';
+
     protected $collection = 'projects';
 
     protected $fillable = [
@@ -23,10 +25,9 @@ class Projects extends Model
     ];
 
     protected $casts = [
+        'status' => ProjectStatus::class,
         'technologies' => 'array',
         'metrics' => 'array',
         'featured' => 'boolean',
     ];
 }
-
-?>

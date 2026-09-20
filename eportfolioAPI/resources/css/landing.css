@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/* Dark mode is class-based: a `dark` class on <html> toggled at runtime. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tabular numerals for stat counters */
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Smooth scroll offset for fixed nav */
+html {
+    scroll-padding-top: 3.5rem;
+}
+
+/* Pulse animation for availability dot */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

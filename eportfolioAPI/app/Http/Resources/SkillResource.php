@@ -7,7 +7,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class SkillResource extends JsonResource
 {
-
     public function toArray(Request $request): array
     {
         return [
@@ -21,7 +20,4 @@ class SkillResource extends JsonResource
             'ai' => $this->ai,
         ];
     }
-    
 }
-
-?>

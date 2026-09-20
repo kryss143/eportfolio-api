@@ -6,8 +6,8 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class Blog extends Model
 {
-
     protected $connection = 'mongodb';
+
     protected $collection = 'blogs';
 
     protected $fillable = [
@@ -22,7 +22,4 @@ class Blog extends Model
     protected $casts = [
         'date' => 'datetime',
     ];
-
 }
-
-?>

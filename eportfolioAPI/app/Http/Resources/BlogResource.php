@@ -7,8 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class BlogResource extends JsonResource
 {
-
-    public function toArray(Request $request) : array
+    public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
@@ -20,7 +19,4 @@ class BlogResource extends JsonResource
             'content' => $this->content,
         ];
     }
-
 }
-
-?>
