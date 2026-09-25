@@ -11,7 +11,6 @@ class Experience extends Model
     protected $collection = 'experiences';
 
     protected $fillable = [
-        'id',
         'position',
         'yearsOfExperience',
         'soloProjects',

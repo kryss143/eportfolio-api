@@ -31,7 +31,6 @@ class ContentSeeder extends Seeder
     {
         Experience::truncate();
         Experience::create([
-            'id' => 'primary',
             'position' => 'Full-Stack Developer',
             'yearsOfExperience' => 2,
             'soloProjects' => 2,
@@ -43,25 +42,21 @@ class ContentSeeder extends Seeder
     {
         Metric::truncate();
         Metric::create([
-            'id' => 'releases',
             'label' => 'Total Projects',
             'value' => 5,
             'metricDescription' => 'Product-style builds spanning frontend, backend, database, and deployment workflows.',
         ]);
         Metric::create([
-            'id' => 'checks',
             'label' => 'Ongoing',
             'value' => 1,
             'metricDescription' => 'Active project work that keeps the portfolio iterative and current.',
         ]);
         Metric::create([
-            'id' => 'performance',
             'label' => 'Live Demo/s Available',
             'value' => 4,
             'metricDescription' => 'Public demos recruiters can review without navigating repositories.',
         ]);
         Metric::create([
-            'id' => 'commits',
             'label' => 'Total Commits',
             'value' => 289,
             'suffix' => '+',

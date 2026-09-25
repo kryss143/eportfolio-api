@@ -15,22 +15,40 @@ class BlogController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $blogs = $this->withFallback(function () use ($request) {
+        // Bug #13: bound per_page; Bug #15: validate sort/direction values.
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'status' => ['sometimes', 'in:published,draft,unpublished'],
+            'search' => ['sometimes', 'string', 'max:255'],
+            'sort' => ['sometimes', 'in:date,created_at,title'],
+            'direction' => ['sometimes', 'in:asc,desc'],
+        ]);
+
+        $blogs = $this->withFallback(function () use ($request, $validated) {
             $query = Blog::query();
 
             if ($request->filled('search')) {
-                $search = $request->input('search');
+                $search = $validated['search'];
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
                         ->orWhere('excerpt', 'like', "%{$search}%");
                 });
             }
 
-            $sort = $request->input('sort', 'date');
-            $direction = $request->input('direction', 'desc');
+            if ($request->filled('status')) {
+                // 'published' = has date, 'draft'/'unpublished' = no date
+                if ($validated['status'] === 'published') {
+                    $query->whereNotNull('date');
+                } else {
+                    $query->whereNull('date');
+                }
+            }
+
+            $sort = $validated['sort'] ?? 'date';
+            $direction = $validated['direction'] ?? 'desc';
             $query->orderBy($sort, $direction);
 
-            return $query->paginate($request->input('per_page', 15));
+            return $query->paginate($validated['per_page'] ?? 15);
         }, 'blogs');
 
         return BlogResource::collection($blogs);

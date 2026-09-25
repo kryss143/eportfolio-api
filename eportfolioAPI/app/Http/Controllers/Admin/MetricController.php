@@ -58,6 +58,10 @@ class MetricController extends Controller
 
     public function update(Request $request, Metric $metric)
     {
+        if ($redirect = $this->denyWhenMongoDown('admin.metrics.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'label' => ['required', 'string', 'max:255'],
             'value' => ['required', 'integer', 'min:0'],

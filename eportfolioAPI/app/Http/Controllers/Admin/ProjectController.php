@@ -44,8 +44,14 @@ class ProjectController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        $sort = $request->input('sort', 'created_at');
-        $direction = $request->input('direction', 'desc');
+        // Bug #5: whitelist sort/direction to prevent crafted query strings
+        // from throwing unhandled exceptions.
+        $validated = $request->validate([
+            'sort' => ['sometimes', 'in:title,created_at,status'],
+            'direction' => ['sometimes', 'in:asc,desc'],
+        ]);
+        $sort = $validated['sort'] ?? 'created_at';
+        $direction = $validated['direction'] ?? 'desc';
         $query->orderBy($sort, $direction);
 
         $projects = $query->paginate(15)->withQueryString();
@@ -127,6 +133,10 @@ class ProjectController extends Controller
 
     public function destroy(Project $project): RedirectResponse
     {
+        if ($redirect = $this->denyWhenMongoDown('admin.projects.index')) {
+            return $redirect;
+        }
+
         if ($project->image && Storage::disk('public')->exists($project->image)) {
             Storage::disk('public')->delete($project->image);
         }
@@ -139,6 +149,10 @@ class ProjectController extends Controller
 
     public function toggleFeatured(Project $project): RedirectResponse
     {
+        if ($redirect = $this->denyWhenMongoDown('admin.projects.index')) {
+            return $redirect;
+        }
+
         $project->update(['featured' => ! $project->featured]);
 
         return back()->with('success', 'Project featured status toggled.');
@@ -146,7 +160,14 @@ class ProjectController extends Controller
 
     public function bulkDelete(Request $request): RedirectResponse
     {
-        $request->validate(['ids' => ['required', 'array']]);
+        if ($redirect = $this->denyWhenMongoDown('admin.projects.index')) {
+            return $redirect;
+        }
+
+        $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['string'],
+        ]);
 
         $projects = Project::whereIn('_id', $request->input('ids'))->get();
 

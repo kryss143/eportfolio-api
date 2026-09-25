@@ -13,7 +13,9 @@ class BlogResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'excerpt' => $this->excerpt,
-            'date' => $this->date,
+            // Bug #16: normalize dates to a single ISO-8601 string whether the
+            // model came from MongoDB (Carbon) or the mock fallback (string).
+            'date' => $this->date ? (string) $this->date : null,
             'readTime' => $this->readTime,
             'slug' => $this->slug,
             'content' => $this->content,

@@ -39,9 +39,11 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed', 'max:72'],
         ]);
 
+        // Skip the update when only the optional password fields were left
+        // empty; otherwise an empty string would overwrite the hash.
         if (($validated['password'] ?? '') === '') {
             unset($validated['password']);
         }

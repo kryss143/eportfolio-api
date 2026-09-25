@@ -58,6 +58,10 @@ class ExperienceController extends Controller
 
     public function update(Request $request, Experience $experience)
     {
+        if ($redirect = $this->denyWhenMongoDown('admin.experiences.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'position' => ['required', 'string', 'max:255'],
             'yearsOfExperience' => ['required', 'integer', 'min:0'],

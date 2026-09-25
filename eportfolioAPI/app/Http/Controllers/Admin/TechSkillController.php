@@ -89,6 +89,10 @@ class TechSkillController extends Controller
 
     public function destroy(TechSkill $techSkill): RedirectResponse
     {
+        if ($redirect = $this->denyWhenMongoDown('admin.tech-skills.index')) {
+            return $redirect;
+        }
+
         $techSkill->delete();
 
         return redirect()->route('admin.tech-skills.index')
@@ -97,7 +101,14 @@ class TechSkillController extends Controller
 
     public function bulkDelete(Request $request): RedirectResponse
     {
-        $request->validate(['ids' => ['required', 'array']]);
+        if ($redirect = $this->denyWhenMongoDown('admin.tech-skills.index')) {
+            return $redirect;
+        }
+
+        $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['string'],
+        ]);
 
         $count = TechSkill::whereIn('_id', $request->input('ids'))->delete();
 

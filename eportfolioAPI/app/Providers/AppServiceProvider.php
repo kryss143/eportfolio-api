@@ -23,9 +23,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Computed lazily, only when the admin layout renders, and memoized per
-        // request so controllers and the banner share one availability probe.
-        View::composer('admin.layouts.app', function ($view) {
+        // Computed lazily, only when an admin view renders, and memoized per
+        // request so controllers, index-view action guards and the banner
+        // share one availability probe. Bug #4: index views use this to hide
+        // row actions that would 404/500 against read-only mock rows.
+        View::composer('admin.*', function ($view) {
             $view->with('mongoAvailable', $this->mongoAvailable());
         });
 

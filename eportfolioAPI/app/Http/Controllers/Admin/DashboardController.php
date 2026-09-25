@@ -9,11 +9,11 @@ use App\Models\Project;
 use App\Models\TechSkill;
 use App\Models\User;
 use App\Services\MockDataService;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    use HandlesMongoFallback;
+
     public function index()
     {
         $mongoAvailable = $this->isMongoAvailable();
@@ -34,10 +34,12 @@ class DashboardController extends Controller
                 'in-progress' => Project::where('status', 'in-progress')->count(),
             ];
 
-            $skillsByCategory = TechSkill::select('category')
-                ->selectRaw('count(*) as count')
-                ->groupBy('category')
-                ->pluck('count', 'category')
+            // Bug #2: the MongoDB query builder cannot compile selectRaw()
+            // expressions inside a grouped aggregation, so count in PHP
+            // (the collection is small) instead of groupBy + pluck.
+            $skillsByCategory = TechSkill::all()
+                ->groupBy(fn (TechSkill $skill) => $skill->category?->value ?? 'other')
+                ->map->count()
                 ->toArray();
 
             $recentBlogs = Blog::orderByDesc('created_at')->limit(5)->get();
@@ -69,7 +71,7 @@ class DashboardController extends Controller
                 $skillsByCategory[$cat] = ($skillsByCategory[$cat] ?? 0) + 1;
             }
 
-            $recentBlogs = collect($mockBlogs)->take(5)->map(fn ($b) => $this->arrayToModel($b));
+            $recentBlogs = collect($mockBlogs)->take(5)->map(fn ($b) => $this->toModel($b));
             $recentActivity = collect();
         }
 
@@ -115,33 +117,5 @@ class DashboardController extends Controller
             'recentActivity',
             'needsAttention'
         ));
-    }
-
-    protected function isMongoAvailable(): bool
-    {
-        try {
-            DB::connection('mongodb')->getMongoDB();
-
-            return true;
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    protected function arrayToModel(array $data): Model
-    {
-        $model = new class extends Model
-        {
-            protected $guarded = [];
-
-            protected $keyType = 'string';
-
-            public $incrementing = false;
-        };
-
-        $model->forceFill($data);
-        $model->exists = true;
-
-        return $model;
     }
 }

@@ -11,7 +11,6 @@ class Metric extends Model
     protected $collection = 'metrics';
 
     protected $fillable = [
-        'id',
         'label',
         'value',
         'suffix',

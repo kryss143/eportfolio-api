@@ -8,22 +8,35 @@ use Illuminate\Support\Facades\DB;
 
 trait HandlesMongoFallback
 {
+    /**
+     * Memoized per-instance MongoDB availability probe.
+     */
+    protected ?bool $mongoAvailable = null;
+
     protected function isMongoAvailable(): bool
     {
-        try {
-            DB::connection('mongodb')->getMongoDB();
+        if ($this->mongoAvailable !== null) {
+            return $this->mongoAvailable;
+        }
 
-            return true;
+        try {
+            DB::connection('mongodb')->getDatabase();
+
+            return $this->mongoAvailable = true;
         } catch (\Throwable) {
-            return false;
+            return $this->mongoAvailable = false;
         }
     }
 
-    protected function mockOrRedirect(string $collection, string $route)
+    /**
+     * Short-circuit row actions when MongoDB is unavailable: the mock data
+     * source is read-only, so persisting anything is impossible. Bug #4.
+     */
+    protected function denyWhenMongoDown(string $route = 'admin.dashboard'): ?\Illuminate\Http\RedirectResponse
     {
         if (! $this->isMongoAvailable()) {
             return redirect()->route($route)
-                ->with('error', 'MongoDB is not available. Showing mock data only. Install ext-mongodb to enable full admin features.');
+                ->with('error', 'MongoDB is not available. Mock data is read-only, so this action cannot be performed.');
         }
 
         return null;

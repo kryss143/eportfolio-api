@@ -75,10 +75,10 @@
                     <div class="group bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all fade-in">
                         <div class="h-48 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center relative overflow-hidden">
                             <div class="text-4xl font-bold text-gray-800">{{ substr($project['title'], 0, 1) }}</div>
-                            @if ($project['status'] === 'in-progress')
+                            @if (($project['status'] ?? null) === 'in-progress')
                                 <span class="absolute top-3 right-3 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full border border-amber-500/30">In Progress</span>
                             @endif
-                            @if ($project['featured'])
+                            @if ($project['featured'] ?? false)
                                 <span class="absolute top-3 left-3 px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-xs rounded-full border border-indigo-500/30">Featured</span>
                             @endif
                         </div>
@@ -86,10 +86,10 @@
                             <h3 class="text-lg font-semibold mb-2">{{ $project['title'] }}</h3>
                             <p class="text-sm text-gray-400 leading-relaxed mb-4">{{ Str::limit($project['description'], 120) }}</p>
                             <div class="flex flex-wrap gap-1.5 mb-4">
-                                @foreach (array_slice($project['technologies'], 0, 4) as $tech)
+                                @foreach (array_slice($project['technologies'] ?? [], 0, 4) as $tech)
                                     <span class="px-2 py-0.5 bg-gray-800 text-gray-300 text-xs rounded-md">{{ $tech }}</span>
                                 @endforeach
-                                @if (count($project['technologies']) > 4)
+                                @if (count($project['technologies'] ?? []) > 4)
                                     <span class="px-2 py-0.5 text-gray-500 text-xs">+{{ count($project['technologies']) - 4 }}</span>
                                 @endif
                             </div>

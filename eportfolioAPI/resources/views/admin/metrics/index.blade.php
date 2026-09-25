@@ -19,10 +19,14 @@
                 <div class="text-sm text-gray-500 dark:text-gray-400">{{ $metric->label }}</div>
                 <div class="text-3xl font-semibold mt-1 tabular-nums">{{ number_format($metric->value) }}{{ $metric->suffix ?? '' }}</div>
                 <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">{{ $metric->metricDescription }}</p>
+                @if ($mongoAvailable)
                 <a href="{{ route('admin.metrics.edit', $metric) }}" class="mt-3 inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
                     Edit
                 </a>
+                @else
+                <span class="mt-3 text-xs text-gray-400" title="Mock data is read-only">Read-only</span>
+                @endif
             </div>
         @endforeach
     </div>
