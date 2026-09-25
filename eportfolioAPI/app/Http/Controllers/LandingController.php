@@ -9,7 +9,7 @@ use App\Models\Project;
 use App\Models\Skill;
 use App\Models\TechSkill;
 use App\Services\MockDataService;
-use Illuminate\Support\Facades\DB;
+use App\Support\MongoProbe;
 use MongoDB\Driver\Exception\AuthenticationException;
 use MongoDB\Driver\Exception\ConnectionException;
 use MongoDB\Driver\Exception\RuntimeException as MongoRuntimeException;
@@ -18,21 +18,33 @@ class LandingController extends Controller
 {
     public function __invoke()
     {
-        // Bug #14: the landing page previously rendered mock data only, so
-        // admin-managed content never appeared on the public site. Query the
-        // real collections and fall back to mock data on connection errors
-        // or when everything is empty.
-        if ($this->mongoAvailable()) {
-            $projects = Project::orderByDesc('created_at')->get()->toArray();
-            $blogs = Blog::orderByDesc('date')->get()->toArray();
-            $metrics = Metric::all()->toArray();
-            $techSkills = TechSkill::orderBy('label')->get()->toArray();
-            $experience = Experience::first()?->toArray();
-            $skills = Skill::first()?->toArray();
+        // Bug #14: query the real collections and fall back to mock data when
+        // Mongo is unavailable or everything is empty.
+        //
+        // Bug #1 (2026-09-25): the healthy branch ran bare — with Mongo
+        // unreachable (and/or a probe false-positive), the queries threw an
+        // unhandled ConnectionTimeoutException and the homepage 500'd. The
+        // queries are now wrapped so any connection failure degrades to mock
+        // data exactly like the public API does.
+        $hasContent = false;
 
-            $hasContent = count($projects) > 0 || count($blogs) > 0 || count($techSkills) > 0;
-        } else {
-            $hasContent = false;
+        if (MongoProbe::available()) {
+            try {
+                // Bug #3 (2026-09-25): drafts (date IS NULL) must never be
+                // published on the public site — the API's "published" filter
+                // uses the same whereNotNull('date') convention.
+                $projects = Project::orderByDesc('created_at')->get()->toArray();
+                $blogs = Blog::whereNotNull('date')->orderByDesc('date')->get()->toArray();
+                $metrics = Metric::all()->toArray();
+                $techSkills = TechSkill::orderBy('label')->get()->toArray();
+                $experience = Experience::first()?->toArray();
+                $skills = Skill::first()?->toArray();
+
+                $hasContent = count($projects) > 0 || count($blogs) > 0 || count($techSkills) > 0;
+            } catch (ConnectionException|AuthenticationException|MongoRuntimeException $e) {
+                MongoProbe::flush();
+                $hasContent = false;
+            }
         }
 
         if (! $hasContent) {
@@ -48,16 +60,5 @@ class LandingController extends Controller
         $groupedSkills = collect($techSkills)->groupBy('category');
 
         return view('landing', compact('projects', 'blogs', 'metrics', 'techSkills', 'experience', 'skills', 'groupedSkills'));
-    }
-
-    protected function mongoAvailable(): bool
-    {
-        try {
-            DB::connection('mongodb')->getDatabase();
-
-            return true;
-        } catch (\Throwable) {
-            return false;
-        }
     }
 }

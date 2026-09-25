@@ -18,7 +18,9 @@ Route::get('/', LandingController::class)->name('home');
 // Admin auth (guest)
 Route::middleware('guest')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    // Bug #6 (2026-09-25): rate-limit credential attempts — 5 per minute per
+    // IP; Auth::attempt() does no throttling of its own.
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 });
 
 // Admin authenticated

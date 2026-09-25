@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Legacy SQLite schema. The app now stores users/sessions on MongoDB;
+    // keep these migrations pinned to sqlite so `migrate` never touches the
+    // default (mongodb) connection.
+    public $connection = 'sqlite';
     /**
      * Run the migrations.
      */

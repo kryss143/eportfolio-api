@@ -58,17 +58,4 @@ class MockDataService
 
         return null;
     }
-
-    public static function filter(string $collection, array $conditions = []): array
-    {
-        $items = self::get($collection);
-
-        foreach ($conditions as $key => $value) {
-            $items = array_filter($items, function ($item) use ($key, $value) {
-                return ($item[$key] ?? null) === $value;
-            });
-        }
-
-        return array_values($items);
-    }
 }

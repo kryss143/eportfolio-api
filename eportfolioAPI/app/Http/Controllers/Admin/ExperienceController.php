@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Experience;
 use App\Services\MockDataService;
+use App\Support\MongoProbe;
 use Illuminate\Http\Request;
 
 class ExperienceController extends Controller
@@ -33,9 +34,11 @@ class ExperienceController extends Controller
 
     public function store(Request $request)
     {
-        if (! $this->isMongoAvailable()) {
+        // Write-path guard: strict primary check (a reachable secondary does
+        // not make inserts possible).
+        if (! MongoProbe::writeAvailable()) {
             return redirect()->route('admin.experiences.index')
-                ->with('error', 'MongoDB is not available. Mock data cannot be modified — install ext-mongodb and connect to create entries.');
+                ->with('error', 'MongoDB writes are unavailable right now (primary unreachable). Please try again shortly.');
         }
 
         $validated = $request->validate([

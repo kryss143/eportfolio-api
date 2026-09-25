@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Legacy SQLite schema (jobs/job_batches/failed_jobs). Kept for tests and
+    // rollback; runtime queue now uses the mongodb connection.
+    public $connection = 'sqlite';
     /**
      * Run the migrations.
      */

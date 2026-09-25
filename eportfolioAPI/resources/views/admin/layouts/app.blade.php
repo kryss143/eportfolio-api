@@ -117,11 +117,13 @@
                 </div>
             </header>
 
-            {{-- Mock-data banner: MongoDB unreachable --}}
-            @if (! $mongoAvailable)
+            {{-- Degraded-mode banner: shown whenever admin mutations are
+                 unavailable — either Mongo fully unreachable (mock data) or a
+                 primary partition (Eloquent reads AND writes need the primary). --}}
+            @if (! $mongoWritable)
                 <div x-data="{ mockBannerHidden: sessionStorage.getItem('mockBannerHidden') === '1' }" x-show="!mockBannerHidden" x-cloak class="mx-4 lg:mx-6 mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm flex items-center gap-2" role="status">
                     <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
-                    <span class="flex-1">MongoDB is unreachable — you're viewing <strong>sample data</strong>. Changes can't be saved right now.</span>
+                    <span class="flex-1">@if ($mongoAvailable) MongoDB writes are <strong>temporarily unavailable</strong> (primary unreachable) — viewing read-only sample data. @else MongoDB is unreachable — you're viewing <strong>sample data</strong>. Changes can't be saved right now. @endif</span>
                     <button type="button" @click="mockBannerHidden = true; sessionStorage.setItem('mockBannerHidden', '1')" class="p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-900/40 shrink-0" aria-label="Dismiss">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
@@ -160,11 +162,13 @@
                     <svg x-show="darkMode" x-cloak class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
                 </button>
             </header>
-            {{-- Mock-data banner: MongoDB unreachable --}}
-            @if (! $mongoAvailable)
+            {{-- Degraded-mode banner: shown whenever admin mutations are
+                 unavailable — either Mongo fully unreachable (mock data) or a
+                 primary partition (Eloquent reads AND writes need the primary). --}}
+            @if (! $mongoWritable)
                 <div x-data="{ mockBannerHidden: sessionStorage.getItem('mockBannerHidden') === '1' }" x-show="!mockBannerHidden" x-cloak class="mx-4 mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm flex items-center gap-2" role="status">
                     <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
-                    <span class="flex-1">MongoDB is unreachable — you're viewing <strong>sample data</strong>. Changes can't be saved right now.</span>
+                    <span class="flex-1">@if ($mongoAvailable) MongoDB writes are <strong>temporarily unavailable</strong> (primary unreachable) — viewing read-only sample data. @else MongoDB is unreachable — you're viewing <strong>sample data</strong>. Changes can't be saved right now. @endif</span>
                     <button type="button" @click="mockBannerHidden = true; sessionStorage.setItem('mockBannerHidden', '1')" class="p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-900/40 shrink-0" aria-label="Dismiss">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>

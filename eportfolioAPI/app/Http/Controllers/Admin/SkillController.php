@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Skill;
 use App\Services\MockDataService;
+use App\Support\MongoProbe;
 use Illuminate\Http\Request;
 
 class SkillController extends Controller
@@ -53,9 +54,11 @@ class SkillController extends Controller
 
     public function update(Request $request)
     {
-        if (! $this->isMongoAvailable()) {
+        // Write-path guard: strict primary check (a reachable secondary does
+        // not make writes possible).
+        if (! MongoProbe::writeAvailable()) {
             return redirect()->route('admin.skills.edit')
-                ->with('error', 'MongoDB is not available. Mock data cannot be saved — install ext-mongodb and connect to save changes.');
+                ->with('error', 'MongoDB writes are unavailable right now (primary unreachable). Please try again shortly.');
         }
 
         $validated = $request->validate([

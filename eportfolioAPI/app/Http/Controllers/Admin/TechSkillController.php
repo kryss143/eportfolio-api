@@ -54,6 +54,11 @@ class TechSkillController extends Controller
 
     public function store(Request $request)
     {
+        // Bug #5 (2026-09-25): store() lacked the Mongo-down guard.
+        if ($redirect = $this->denyWhenMongoDown('admin.tech-skills.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'category' => ['required', 'string', 'in:'.implode(',', array_column(TechCategory::cases(), 'value'))],
             'logo' => ['required', 'string', 'max:255'],

@@ -50,6 +50,21 @@ return [
             'database' => env('MONGODB_DATABASE', 'eportfolio'),
             'username' => env('MONGODB_USERNAME'),
             'password' => env('MONGODB_PASSWORD'),
+            // Bug #9 (2026-09-25): with the server unreachable, every request
+            // stalled on the driver's default server-selection timeout. Cap it
+            // so probes/queries fail fast (~1.5 s worst case) and the mock
+            // fallback engages quickly. Per the PHP driver, entries here take
+            // precedence over the same params in the DSN.
+            'options' => [
+                'connectTimeoutMS' => env('MONGODB_CONNECT_TIMEOUT_MS', 1500),
+                'serverSelectionTimeoutMS' => env('MONGODB_SERVER_SELECTION_TIMEOUT_MS', 2500),
+                'socketTimeoutMS' => env('MONGODB_SOCKET_TIMEOUT_MS', 1500),
+                // Keep retrying server selection within the timeout budget
+                // instead of failing after one scan round — rides out the
+                // intermittent TLS handshake alerts Atlas SRV endpoints emit
+                // under flaky networks.
+                'serverSelectionTryOnce' => false,
+            ],
         ],
         'mysql' => [
             'driver' => 'mysql',

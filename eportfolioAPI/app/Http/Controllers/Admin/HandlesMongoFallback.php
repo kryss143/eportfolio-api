@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Support\MongoProbe;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 trait HandlesMongoFallback
 {
@@ -19,24 +19,32 @@ trait HandlesMongoFallback
             return $this->mongoAvailable;
         }
 
-        try {
-            DB::connection('mongodb')->getDatabase();
-
-            return $this->mongoAvailable = true;
-        } catch (\Throwable) {
-            return $this->mongoAvailable = false;
-        }
+        // Bug #2 (2026-09-25): getDatabase() performs no server I/O, so the
+        // probe reported Mongo as available even while unreachable. MongoProbe
+        // issues a real ping() instead.
+        //
+        // Primary-partition lesson (2026-09-25 connectivity audit): Eloquent
+        // queries — READS included — run with the default `primary` read
+        // preference, so a reachable secondary does NOT make admin list
+        // pages work (observed: read probe true, /admin/projects 500).
+        // Admin branching therefore keys on PRIMARY reachability.
+        return $this->mongoAvailable = MongoProbe::writeAvailable();
     }
 
     /**
      * Short-circuit row actions when MongoDB is unavailable: the mock data
      * source is read-only, so persisting anything is impossible. Bug #4.
+     *
+     * Uses the WRITE-availability probe (strict primary): a reachable
+     * secondary can serve reads for the index pages, but without the primary
+     * every mutation would 500 (observed during the 2026-09-25 primary
+     * partition — pings OK, writes failing).
      */
     protected function denyWhenMongoDown(string $route = 'admin.dashboard'): ?\Illuminate\Http\RedirectResponse
     {
-        if (! $this->isMongoAvailable()) {
+        if (! MongoProbe::writeAvailable()) {
             return redirect()->route($route)
-                ->with('error', 'MongoDB is not available. Mock data is read-only, so this action cannot be performed.');
+                ->with('error', 'MongoDB writes are unavailable right now (primary unreachable). Data shown may be read-only; please try again shortly.');
         }
 
         return null;

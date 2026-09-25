@@ -32,7 +32,9 @@ trait FallbackData
     protected function withFallback(callable $dbCallback, string $mockCollection)
     {
         try {
-            DB::connection('mongodb')->getDatabase();
+            // Note: deliberately no availability pre-check here — getDatabase()
+            // is I/O-free (probe bug #2), and the query itself is the probe:
+            // its connection errors are caught below and trigger the fallback.
             $result = $dbCallback();
 
             // Bug #12: empty Collections (all()/get() endpoints) must fall back
@@ -66,16 +68,32 @@ trait FallbackData
     }
 
     /**
-     * Try a single-record DB query; fall back to mock data on connection errors.
+     * Try a single-record DB query; fall back to mock data ONLY when the DB
+     * is reachable but has no data (collection empty) — i.e. exactly when the
+     * list endpoints serve mock content (bug #10).
+     *
+     * On a connection error the mock item is NOT served: the list endpoint
+     * would 404/fail for the same identifier, and mock ids ("p1", "b1") are
+     * not stable identifiers a client can rely on. This keeps list and detail
+     * endpoints consistent — no phantom detail pages for ids the list never
+     * exposes.
      */
     protected function withFallbackSingle(callable $dbCallback, string $mockCollection, string $key, string $value)
     {
         try {
-            DB::connection('mongodb')->getDatabase();
+            // No availability pre-check — the callback's query IS the probe:
+            // its connection errors are caught below and trigger the mock
+            // fallback (a pre-check would just add a round trip per request).
             $result = $dbCallback();
 
             if ($result) {
                 return $result;
+            }
+
+            // DB answered authoritatively: serve the mock item only when the
+            // collection is empty (mirrors withFallback's empty-DB branch).
+            if ($this->collectionHasDocuments($mockCollection)) {
+                return null;
             }
 
             return $this->findMockItem($mockCollection, $key, $value);
@@ -84,8 +102,20 @@ trait FallbackData
                 throw $e;
             }
 
+            // Mongo unreachable: same condition as the list fallback —
+            // serve the mock item so detail links from a mock list work.
             return $this->findMockItem($mockCollection, $key, $value);
         }
+    }
+
+    /**
+     * Does the given collection contain at least one document?
+     */
+    protected function collectionHasDocuments(string $collection): bool
+    {
+        // first() rather than exists() — guaranteed supported by the MongoDB
+        // query builder (used throughout the codebase).
+        return DB::connection('mongodb')->table($collection)->limit(1)->first() !== null;
     }
 
     /**
@@ -159,9 +189,15 @@ trait FallbackData
     /**
      * Paginate mock items wrapped as model instances.
      * Bug #17: keeps the query string on generated pagination links.
+     *
+     * v2-audit fix: honor the request's validated per_page (bounded to the
+     * same 1..100 range the endpoints validate) instead of hardcoding 15 —
+     * the DB path and the mock path must produce identical envelope shapes.
      */
-    protected function mockPaginate(array $items, string $collection = '', int $perPage = 15): LengthAwarePaginator
+    protected function mockPaginate(array $items, string $collection = '', ?int $perPage = null): LengthAwarePaginator
     {
+        $perPage ??= (int) request()->input('per_page', 15);
+        $perPage = max(1, min(100, $perPage));
         $page = max(1, (int) request()->input('page', 1));
         $offset = ($page - 1) * $perPage;
         $sliced = array_slice($items, $offset, $perPage);

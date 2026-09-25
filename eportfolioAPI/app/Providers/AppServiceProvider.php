@@ -8,14 +8,12 @@ use App\Models\Metric;
 use App\Models\Project;
 use App\Models\TechSkill;
 use App\Observers\ActivityObserver;
-use Illuminate\Support\Facades\DB;
+use App\Support\MongoProbe;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    private ?bool $mongoAvailable = null;
-
     public function register(): void
     {
         //
@@ -24,11 +22,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Computed lazily, only when an admin view renders, and memoized per
-        // request so controllers, index-view action guards and the banner
-        // share one availability probe. Bug #4: index views use this to hide
-        // row actions that would 404/500 against read-only mock rows.
+        // request so controllers, index-view action guards and the banners
+        // share one availability probe. Bug #4: index views use these to hide
+        // row actions that would fail — mock rows when Mongo is down entirely
+        // (mongoAvailable), real rows during a primary partition
+        // (mongoWritable, strict-primary probe).
         View::composer('admin.*', function ($view) {
             $view->with('mongoAvailable', $this->mongoAvailable());
+            $view->with('mongoWritable', MongoProbe::writeAvailable());
         });
 
         Blog::observe(ActivityObserver::class);
@@ -40,24 +41,13 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Is MongoDB reachable? Skipped entirely when the extension is missing;
-     * result memoized for the rest of the request.
+     * result memoized for the rest of the request (per-process static).
+     *
+     * Bug #2 (2026-09-25): getMongoDB() was both deprecated and, like
+     * getDatabase(), I/O-free. MongoProbe::available() pings the server.
      */
     private function mongoAvailable(): bool
     {
-        if ($this->mongoAvailable !== null) {
-            return $this->mongoAvailable;
-        }
-
-        if (! extension_loaded('mongodb')) {
-            return $this->mongoAvailable = false;
-        }
-
-        try {
-            DB::connection('mongodb')->getMongoDB();
-
-            return $this->mongoAvailable = true;
-        } catch (\Throwable) {
-            return $this->mongoAvailable = false;
-        }
+        return MongoProbe::available();
     }
 }

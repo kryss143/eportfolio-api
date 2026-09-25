@@ -65,6 +65,11 @@ class BlogController extends Controller
 
     public function store(Request $request)
     {
+        // Bug #5 (2026-09-25): store() lacked the Mongo-down guard.
+        if ($redirect = $this->denyWhenMongoDown('admin.blogs.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'excerpt' => ['required', 'string'],

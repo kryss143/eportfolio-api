@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Legacy SQLite schema. activity_log lives on MongoDB at runtime.
+    public $connection = 'sqlite';
+
     public function up(): void
     {
         Schema::create('activity_log', function (Blueprint $table) {

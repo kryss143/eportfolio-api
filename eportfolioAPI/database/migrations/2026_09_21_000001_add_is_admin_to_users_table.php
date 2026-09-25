@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Legacy SQLite schema (see 0001_01_01_000000).
+    public $connection = 'sqlite';
+
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

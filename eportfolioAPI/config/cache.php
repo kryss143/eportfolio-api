@@ -47,6 +47,17 @@ return [
             'lock_table' => env('DB_CACHE_LOCK_TABLE'),
         ],
 
+        // MongoDB store provided by mongodb/laravel-mongodb. Expects a
+        // `cache` collection (created on demand); run
+        // app:migrate-sqlite-to-mongodb to create the TTL indexes.
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'connection' => env('DB_CACHE_CONNECTION', 'mongodb'),
+            'collection' => env('DB_CACHE_COLLECTION', 'cache'),
+            'lock_connection' => env('DB_CACHE_LOCK_CONNECTION'),
+            'lock_collection' => env('DB_CACHE_LOCK_COLLECTION', 'cache_locks'),
+        ],
+
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),

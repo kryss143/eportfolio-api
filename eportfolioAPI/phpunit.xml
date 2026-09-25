@@ -32,5 +32,13 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- v2-audit fix: pin Mongo to a closed port so the suite never talks
+             to real Atlas (was: tests lasted 0.3s or 3.2s depending on the
+             network, and failed offline). Probes fail fast (~1s, deterministic)
+             and every endpoint exercises its mock-fallback path. -->
+        <env name="MONGODB_URI" value="mongodb://127.0.0.1:1"/>
+        <env name="MONGODB_CONNECT_TIMEOUT_MS" value="100"/>
+        <env name="MONGODB_SERVER_SELECTION_TIMEOUT_MS" value="100"/>
+        <env name="MONGODB_SOCKET_TIMEOUT_MS" value="100"/>
     </php>
 </phpunit>

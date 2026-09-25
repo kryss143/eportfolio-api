@@ -66,6 +66,13 @@ class ProjectController extends Controller
 
     public function store(Request $request)
     {
+        // Bug #5 (2026-09-25): store() lacked the guard — with Mongo down the
+        // create() threw an unhandled ConnectionTimeoutException (500) after
+        // the admin filled in the whole form.
+        if ($redirect = $this->denyWhenMongoDown('admin.projects.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
@@ -171,14 +178,19 @@ class ProjectController extends Controller
 
         $projects = Project::whereIn('_id', $request->input('ids'))->get();
 
+        // Bug #8 (2026-09-25): count the models BEFORE mutating them so the
+        // flash message reports the attempted (not post-mutation) size.
+        $attempted = count($projects);
+        $deleted = 0;
+
         foreach ($projects as $project) {
             if ($project->image && Storage::disk('public')->exists($project->image)) {
                 Storage::disk('public')->delete($project->image);
             }
-            $project->delete();
+            $deleted += $project->delete() ? 1 : 0;
         }
 
         return redirect()->route('admin.projects.index')
-            ->with('success', count($projects).' project(s) deleted.');
+            ->with('success', "{$deleted}/{$attempted} project(s) deleted.");
     }
 }

@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Legacy SQLite schema (cache/cache_locks). Kept for tests and rollback;
+    // runtime cache now uses the mongodb store.
+    public $connection = 'sqlite';
     /**
      * Run the migrations.
      */

@@ -175,8 +175,12 @@
                 @foreach ($blogs as $blog)
                     <article class="bg-gray-900/50 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-all fade-in">
                         <div class="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                            <time>{{ \Carbon\Carbon::parse($blog['date'])->format('M d, Y') }}</time>
-                            <span>·</span>
+                            {{-- Bug #4 (2026-09-25): Carbon::parse(null) returns "now", so
+                                 a missing date rendered as today. Guard it. --}}
+                            @if (! empty($blog['date']))
+                                <time>{{ \Carbon\Carbon::parse($blog['date'])->format('M d, Y') }}</time>
+                                <span>·</span>
+                            @endif
                             <span>{{ $blog['readTime'] }}</span>
                         </div>
                         <h3 class="font-semibold mb-2 leading-snug">{{ $blog['title'] }}</h3>
