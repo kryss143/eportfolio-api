@@ -9,22 +9,28 @@ use App\Models\Metric;
 use App\Models\Project;
 use App\Models\Skill;
 use App\Models\TechSkill;
+use App\Support\MongoProbe;
 use Illuminate\Database\Seeder;
 
 class ContentSeeder extends Seeder
 {
     public function run(): void
     {
-        try {
-            $this->seedExperience();
-            $this->seedMetrics();
-            $this->seedProjects();
-            $this->seedBlogs();
-            $this->seedSkills();
-            $this->seedTechSkills();
-        } catch (\Throwable $e) {
+        // Check THIS connection explicitly: a generic Throwable catch alone
+        // would hide a misconfigured app (e.g. an sqlite default silently
+        // seeding the wrong store while Mongo is actually fine).
+        if (! MongoProbe::available()) {
             $this->command?->warn('ContentSeeder skipped: MongoDB not available. API will use mock-data.json fallback.');
+
+            return;
         }
+
+        $this->seedExperience();
+        $this->seedMetrics();
+        $this->seedProjects();
+        $this->seedBlogs();
+        $this->seedSkills();
+        $this->seedTechSkills();
     }
 
     protected function seedExperience(): void

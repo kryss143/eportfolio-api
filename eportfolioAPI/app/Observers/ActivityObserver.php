@@ -15,12 +15,22 @@ class ActivityObserver
 
     public function updated(Model $model): void
     {
-        $old = $model->getOriginal();
-        $new = $model->getAttributes();
-        $changes = array_diff_assoc($new, $old);
+        // getChanges() holds the raw dirty values that were just written; it is
+        // populated by syncChanges() before the 'updated' event fires (and
+        // before syncOriginal() in finishSave), so getOriginal() still yields
+        // the pre-update snapshot here.
+        //
+        // The previous implementation diffed getAttributes() (raw storage —
+        // JSON strings for array/json casts on the MongoDB package) against
+        // getOriginal() (cast-decoded PHP arrays). array_diff_assoc() then
+        // string-compared an array value and raised "Array to string
+        // conversion", which Laravel's error handler converts to an
+        // ErrorException -> 500 on every Project update (audit F1, 2026-09-28).
+        // It also flagged technologies/metrics as changed on every save.
+        $changes = $model->getChanges();
 
         if (! empty($changes)) {
-            $this->log($model, 'updated', $old, $changes);
+            $this->log($model, 'updated', $model->getOriginal(), $changes);
         }
     }
 

@@ -21,12 +21,15 @@ class Skill extends Model
     ];
 
     protected $casts = [
-        'proficient' => 'array',
-        'familiar' => 'array',
-        'authentication' => 'array',
-        'architecture' => 'array',
-        'toolsPlatforms' => 'array',
-        'practices' => 'array',
-        'ai' => 'array',
+        // 'json' rather than 'array' (audit F4, 2026-09-28): values are stored
+        // as JSON-encoded strings by the MongoDB package; 'array' triggers a
+        // USER_DEPRECATED on every write. Both casts decode to PHP arrays.
+        'proficient' => 'json',
+        'familiar' => 'json',
+        'authentication' => 'json',
+        'architecture' => 'json',
+        'toolsPlatforms' => 'json',
+        'practices' => 'json',
+        'ai' => 'json',
     ];
 }

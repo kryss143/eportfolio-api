@@ -43,6 +43,16 @@ trait FallbackData
             $isEmptyCollection = $result instanceof \Illuminate\Support\Collection && $result->isEmpty();
 
             if ($isEmptyPaginator || $isEmptyCollection) {
+                // Guard (audit r2 F1, 2026-09-28): fall back to mock only when
+                // the underlying collection has NO documents at all — the same
+                // rule withFallbackSingle() applies. An empty *filtered* view
+                // of a populated live collection (e.g. ?status=published on an
+                // all-drafts DB, or a search that matches nothing) is the
+                // truthful answer and must not be substituted with mock data.
+                if ($this->collectionHasDocuments($mockCollection)) {
+                    return $result;
+                }
+
                 $mockItems = $this->applyMockFilters($mockCollection);
 
                 if (! empty($mockItems)) {
@@ -152,6 +162,11 @@ trait FallbackData
             } else {
                 $items = array_values(array_filter($items, fn ($p) => ($p['status'] ?? '') === $status));
             }
+        } elseif ($collection === 'blogs') {
+            // Drafts (no date) are never public by default — mirrors the DB
+            // path's whereNotNull('date') default (audit F2, 2026-09-28), so
+            // the degraded mode serves exactly what the healthy mode would.
+            $items = array_values(array_filter($items, fn ($b) => ! empty($b['date'])));
         }
 
         if ($request->filled('featured')) {

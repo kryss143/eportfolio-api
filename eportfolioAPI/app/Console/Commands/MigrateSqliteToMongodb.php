@@ -73,8 +73,11 @@ class MigrateSqliteToMongodb extends Command
         // Existing mongo users (by email) — skip them on re-runs and reuse
         // their _id for the activity_log remap.
         $existing = [];
-        foreach ($mongo->table('users')->get(['email']) as $doc) {
-            $existing[(string) $doc->email] = (string) $doc->_id;
+        // The mongodb builder aliases _id to "id" on returned docs (driver
+        // 5.9) and omits it unless requested — read ->id, not ->_id, or
+        // re-runs crash on an undefined property (non-idempotent).
+        foreach ($mongo->table('users')->get(['_id', 'email']) as $doc) {
+            $existing[(string) $doc->email] = (string) $doc->id;
         }
 
         $toInsert = [];
@@ -186,7 +189,11 @@ class MigrateSqliteToMongodb extends Command
         $db->selectCollection('activity_log')->createIndex(['event' => 1], ['name' => 'idx_event']);
         $db->selectCollection('activity_log')->createIndex(['subject_type' => 1, 'subject_id' => 1], ['name' => 'idx_subject']);
         $db->selectCollection('activity_log')->createIndex(['user_id' => 1], ['name' => 'idx_user']);
-        $db->selectCollection('activity_log')->createIndex(['created_at' => -1], ['name' => 'idx_created_at']);
+        // Ascending: a single-field index serves both sort directions, and
+        // the schema migrations create this same name ascending — a -1 spec
+        // under an existing same-name index makes re-runs fail with an
+        // IndexOptionsConflict.
+        $db->selectCollection('activity_log')->createIndex(['created_at' => 1], ['name' => 'idx_created_at']);
 
         // TTL indexes so the framework collections self-clean (mirrors the
         // sqlite cache table's expiration behaviour).

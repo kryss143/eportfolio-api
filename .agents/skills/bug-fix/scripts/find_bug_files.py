@@ -107,7 +107,7 @@ def main():
         "--output",
         default=None,
         help="Output path for the discovery log "
-             "(default: <root>/eportfolioAPI/bug-fixes/bug-fixes.md)",
+             "(default: <root>/bug-fixes/bug-fixes.md)",
     )
     args = parser.parse_args()
 
@@ -116,7 +116,7 @@ def main():
         print(f"Error: root directory does not exist: {root}", file=sys.stderr)
         sys.exit(1)
 
-    output_path = args.output or os.path.join(root, "eportfolioAPI", "bug-fixes", "bug-fixes.md")
+    output_path = args.output or os.path.join(root, "bug-fixes", "bug-fixes.md")
     output_path = os.path.abspath(output_path)
 
     results = find_matches(root)

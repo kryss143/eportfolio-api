@@ -26,7 +26,7 @@ from datetime import date
 
 SKIP_DIRS = {
     ".git", "node_modules", "venv", ".venv", "__pycache__", "vendor",
-    "dist", "build", ".next", ".cache", "eportfolioAPI", "target",
+    "dist", "build", ".next", ".cache", "target",
     "coverage", ".pytest_cache",
 }
 
@@ -161,7 +161,7 @@ def main():
     parser = argparse.ArgumentParser(description="Heuristic scan for common bug patterns.")
     parser.add_argument("--root", required=True, help="Root directory to scan.")
     parser.add_argument("--output", default=None,
-                         help="Output path (default: <root>/eportfolioAPI/bugs-reported/pattern-scan.md)")
+                         help="Output path (default: <root>/bugs-reported/pattern-scan.md)")
     parser.add_argument("--category", action="append", choices=CATEGORY_ORDER,
                          help="Limit to one or more categories (repeatable). Default: all.")
     args = parser.parse_args()
@@ -172,7 +172,7 @@ def main():
         sys.exit(1)
 
     categories = set(args.category) if args.category else set(CATEGORY_ORDER)
-    output_path = args.output or os.path.join(root, "eportfolioAPI", "bugs-reported", "pattern-scan.md")
+    output_path = args.output or os.path.join(root, "bugs-reported", "pattern-scan.md")
     output_path = os.path.abspath(output_path)
 
     results = scan(root, categories)

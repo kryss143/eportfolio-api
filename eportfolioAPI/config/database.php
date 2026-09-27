@@ -42,7 +42,7 @@ return [
             'journal_mode' => null,
             'synchronous' => null,
             'transaction_mode' => 'DEFERRED',
-        ],        'mongodb' => [
+        ],  'mongodb' => [
             'driver' => 'mongodb',
             'dsn' => env('MONGODB_URI'),
             'host' => env('MONGODB_HOST', '127.0.0.1'),
@@ -52,13 +52,19 @@ return [
             'password' => env('MONGODB_PASSWORD'),
             // Bug #9 (2026-09-25): with the server unreachable, every request
             // stalled on the driver's default server-selection timeout. Cap it
-            // so probes/queries fail fast (~1.5 s worst case) and the mock
-            // fallback engages quickly. Per the PHP driver, entries here take
-            // precedence over the same params in the DSN.
+            // so probes/queries fail fast and the mock fallback engages
+            // quickly. (Audit r3 F1, 2026-09-28: measured envelope with the
+            // server DOWN is ~2.5s per probe/query attempt — the full
+            // server-selection cycle below — not the ~1.5s previously claimed
+            // here; the mock fallback engages after it.) Per the PHP driver,
+            // entries here take precedence over the same params in the DSN.
             'options' => [
-                'connectTimeoutMS' => env('MONGODB_CONNECT_TIMEOUT_MS', 1500),
-                'serverSelectionTimeoutMS' => env('MONGODB_SERVER_SELECTION_TIMEOUT_MS', 2500),
-                'socketTimeoutMS' => env('MONGODB_SOCKET_TIMEOUT_MS', 1500),
+                // Cast to int: env() (phpunit.xml, .env) always yields strings,
+                // and the driver rejects string URI options —
+                // "Expected 32-bit integer for \"connectTimeoutMS\"" (audit F6).
+                'connectTimeoutMS' => (int) env('MONGODB_CONNECT_TIMEOUT_MS', 1500),
+                'serverSelectionTimeoutMS' => (int) env('MONGODB_SERVER_SELECTION_TIMEOUT_MS', 2500),
+                'socketTimeoutMS' => (int) env('MONGODB_SOCKET_TIMEOUT_MS', 1500),
                 // Keep retrying server selection within the timeout budget
                 // instead of failing after one scan round — rides out the
                 // intermittent TLS handshake alerts Atlas SRV endpoints emit

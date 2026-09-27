@@ -7,7 +7,6 @@ use App\Models\ActivityLog;
 use App\Models\Blog;
 use App\Models\Project;
 use App\Models\TechSkill;
-use App\Models\User;
 use App\Services\MockDataService;
 
 class DashboardController extends Controller
@@ -18,15 +17,11 @@ class DashboardController extends Controller
     {
         $mongoAvailable = $this->isMongoAvailable();
 
-        // Users always come from SQLite
-        $userCount = User::count();
-
         if ($mongoAvailable) {
             $stats = [
                 'projects' => Project::count(),
                 'blogs' => Blog::count(),
                 'tech_skills' => TechSkill::count(),
-                'users' => $userCount,
             ];
 
             $projectsByStatus = [
@@ -51,13 +46,10 @@ class DashboardController extends Controller
             // Use mock data
             $mockProjects = MockDataService::get('projects');
             $mockBlogs = MockDataService::get('blogs');
-            $mockTechSkills = MockDataService::get('tech_skills');
-
-            $stats = [
+            $mockTechSkills = MockDataService::get('tech_skills');            $stats = [
                 'projects' => count($mockProjects),
                 'blogs' => count($mockBlogs),
                 'tech_skills' => count($mockTechSkills),
-                'users' => $userCount,
             ];
 
             $projectsByStatus = [

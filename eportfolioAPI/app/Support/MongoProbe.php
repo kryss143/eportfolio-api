@@ -18,20 +18,40 @@ use MongoDB\Driver\ReadPreference;
  */
 final class MongoProbe
 {
-    /** Memoized read-availability result. */
-    private static ?bool $available = null;
+    /**
+     * How long a memoized verdict stays trusted. Process-lifetime memoization
+     * (audit r2 F2, 2026-09-28) never expires under single-process servers
+     * (`php artisan serve` / long-lived workers): an outage after the first
+     * successful probe left admin pages taking the DB branch and 500ing until
+     * restart, even after Mongo recovered. Time-boxing keeps the burst
+     * protection within the TTL window while bounding staleness to it.
+     */
+    private const MEMO_TTL_SECONDS = 5;
 
-    /** Memoized write-availability result. */
+    /** Memoized read-availability result and the time it was recorded. */
+    private static ?bool $available = null;
+    private static ?int $availableAt = null;
+
+    /** Memoized write-availability result and the time it was recorded. */
     private static ?bool $writable = null;
+    private static ?int $writableAt = null;
+
+    private static function memoIsFresh(?int $recordedAt): bool
+    {
+        return $recordedAt !== null
+            && (microtime(true) - $recordedAt) < self::MEMO_TTL_SECONDS;
+    }
 
     public static function available(int $maxWaitMs = 1000): bool
     {
-        if (self::$available !== null) {
+        if (self::$available !== null && self::memoIsFresh(self::$availableAt)) {
             return self::$available;
         }
 
         if (! extension_loaded('mongodb')) {
-            return self::$available = false;
+            self::$availableAt = microtime(true);
+
+        return self::$available = false;
         }
 
         // Atlas SRV endpoints occasionally fail the TLS handshake in bursts
@@ -39,13 +59,22 @@ final class MongoProbe
         // between attempts so each try gets a fresh Client/topology (the
         // driver's cached one fails fast after a failed selection).
         //
-        // Default budget keeps request-time probes fast (~1 s worst case);
-        // long-running admin commands can pass a larger deadline.
+        // Latency envelope (audit r3 F1, 2026-09-28): with the server DOWN,
+        // one attempt always burns the full server-selection cycle before the
+        // $maxWaitMs check can run — measured at ~2.5s per probe with the
+        // config's serverSelectionTimeoutMS=2500, NOT the ~1s the previous
+        // docblock claimed ($maxWaitMs only gates BETWEEN attempts). To make
+        // the budget real, cap serverSelectionTimeoutMS <= maxWaitMs; that
+        // trades against the burst tolerance above, so it stays a deliberate
+        // config choice rather than a silent change here. With Mongo UP the
+        // probe is one ping round trip.
         $start = microtime(true);
         $purged = false;
         do {
             try {
                 DB::connection('mongodb')->ping();
+
+                self::$availableAt = microtime(true);
 
                 return self::$available = true;
             } catch (\Throwable) {
@@ -64,6 +93,8 @@ final class MongoProbe
             }
         } while (true);
 
+        self::$availableAt = microtime(true);
+
         return self::$available = false;
     }
 
@@ -80,12 +111,14 @@ final class MongoProbe
      */
     public static function writeAvailable(int $maxWaitMs = 1000): bool
     {
-        if (self::$writable !== null) {
+        if (self::$writable !== null && self::memoIsFresh(self::$writableAt)) {
             return self::$writable;
         }
 
         if (! extension_loaded('mongodb')) {
-            return self::$writable = false;
+            self::$writableAt = microtime(true);
+
+        return self::$writable = false;
         }
 
         $start = microtime(true);
@@ -98,6 +131,8 @@ final class MongoProbe
                     new Command(['ping' => 1]),
                     ['readPreference' => new ReadPreference(ReadPreference::PRIMARY)],
                 );
+
+                self::$writableAt = microtime(true);
 
                 return self::$writable = true;
             } catch (ConnectionException|\MongoDB\Driver\Exception\RuntimeException) {
@@ -112,6 +147,8 @@ final class MongoProbe
             }
         } while (true);
 
+        self::$writableAt = microtime(true);
+
         return self::$writable = false;
     }
 
@@ -123,7 +160,9 @@ final class MongoProbe
     public static function flush(): void
     {
         self::$available = null;
+        self::$availableAt = null;
         self::$writable = null;
+        self::$writableAt = null;
         DB::purge('mongodb');
     }
 }

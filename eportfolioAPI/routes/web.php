@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\MetricController;
 use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\SkillController;
 use App\Http\Controllers\Admin\TechSkillController;
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\LandingController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,13 +49,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::resource('tech-skills', TechSkillController::class);
     Route::post('tech-skills/bulk-delete', [TechSkillController::class, 'bulkDelete'])->name('tech-skills.bulk-delete');
-
-    // Users
-    Route::get('users', [UserController::class, 'index'])->name('users.index');
-    Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::post('users/{user}/toggle-admin', [UserController::class, 'toggleAdmin'])->name('users.toggle-admin');
-    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Activity log
     Route::get('activity', [ActivityController::class, 'index'])->name('activity.index');

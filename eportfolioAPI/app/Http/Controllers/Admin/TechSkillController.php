@@ -80,6 +80,12 @@ class TechSkillController extends Controller
 
     public function update(Request $request, TechSkill $techSkill)
     {
+        // Audit F3 (2026-09-28): update() lacked the Mongo-down guard that
+        // store/destroy/bulk already carry (bug #5 series).
+        if ($redirect = $this->denyWhenMongoDown('admin.tech-skills.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'category' => ['required', 'string', 'in:'.implode(',', array_column(TechCategory::cases(), 'value'))],
             'logo' => ['required', 'string', 'max:255'],

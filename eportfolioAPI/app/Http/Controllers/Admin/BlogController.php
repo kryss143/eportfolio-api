@@ -18,7 +18,10 @@ class BlogController extends Controller
             $items = MockDataService::get('blogs');
             if ($request->filled('search')) {
                 $search = $request->input('search');
-                $items = array_values(array_filter($items, fn ($b) => str_contains($b['title'] ?? '', $search)));
+                // Search title + excerpt, matching the live-DB query below
+                // (audit r2 F3, 2026-09-28: degraded mode must agree with the
+                // healthy path).
+                $items = array_values(array_filter($items, fn ($b) => str_contains($b['title'] ?? '', $search) || str_contains($b['excerpt'] ?? '', $search)));
             }
             $blogs = $this->mockPaginate($items);
 
@@ -94,6 +97,12 @@ class BlogController extends Controller
 
     public function update(Request $request, Blog $blog)
     {
+        // Audit F3 (2026-09-28): update() lacked the Mongo-down guard that
+        // store/destroy/toggle/bulk already carry (bug #5 series).
+        if ($redirect = $this->denyWhenMongoDown('admin.blogs.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'excerpt' => ['required', 'string'],

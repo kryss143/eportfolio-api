@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orders admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // The ONLY CSS you write: ~4 theme vars per theme + a tiny tailwind.config
+  // extension. For production, replace the Play CDN with a real build (SKILL.md).
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: {
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        raised:  'rgb(var(--raised) / <alpha-value>)',
+        accent:  { DEFAULT: 'rgb(var(--accent) / <alpha-value>)', fg: 'rgb(var(--accent-fg) / <alpha-value>)' },
+      },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+    }},
+  };
+  // Initial theme: saved preference, else system preference. Runs before paint
+  // to avoid a flash of the wrong theme.
+  try {
+    const saved = localStorage.getItem('theme');
+    const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.classList.toggle('dark', dark);
+  } catch {}
+</script>
+<style>
+  :root  { --surface: 255 255 255; --raised: 241 245 249; --accent: 79 70 229; --accent-fg: 255 255 255; }
+  .dark  { --surface: 23 23 28;    --raised: 39 39 46;    --accent: 129 140 248; --accent-fg: 30 27 45; }
+</style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-accent-fg">Skip to content</a>
+
+<div class="flex min-h-dvh">
+  <!-- Sidebar: fixed off-canvas drawer under lg, static column from lg up -->
+  <aside id="sidebar" aria-label="Sidebar"
+         class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-slate-200 bg-surface transition-transform duration-200 motion-reduce:transition-none dark:border-slate-700/60 lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0">
+    <div class="flex items-center gap-2.5 p-4 text-base font-semibold">
+      <span class="size-6 rounded-lg bg-accent" aria-hidden="true"></span><span>Harbor Goods</span>
+    </div>
+    <nav class="flex-1 space-y-1 overflow-y-auto px-3">
+      <a href="#" aria-current="page"
+         class="flex items-center gap-2.5 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 dark:bg-white/10 dark:text-white">
+        <svg class="size-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Overview</a>
+      <p class="px-3 pb-1 pt-4 text-xs uppercase tracking-wide text-slate-400">Sales</p>
+      <a href="#" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-raised dark:text-slate-300 dark:hover:bg-white/5">
+        <svg class="size-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h15l-2 9H8L6 3H3M9 20a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z"/></svg>
+        Orders <span class="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">4</span></a>
+      <a href="#" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-raised dark:text-slate-300 dark:hover:bg-white/5">
+        <svg class="size-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5v8l-9 5-9-5V8z"/></svg>Products</a>
+      <a href="#" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-raised dark:text-slate-300 dark:hover:bg-white/5">
+        <svg class="size-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M17 4a4 4 0 010 8M22 21c0-3-2-5-4-5.5"/></svg>Customers</a>
+      <p class="px-3 pb-1 pt-4 text-xs uppercase tracking-wide text-slate-400">Settings</p>
+      <a href="#" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-raised dark:text-slate-300 dark:hover:bg-white/5">
+        <svg class="size-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Store settings</a>
+    </nav>
+  </aside>
+  <!-- Backdrop behind the mobile drawer -->
+  <div id="backdrop" class="fixed inset-0 z-30 hidden bg-black/50 lg:hidden" aria-hidden="true"></div>
+
+  <!-- Main column -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-surface px-4 dark:border-slate-700/60">
+      <button id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar"
+              class="grid size-9 place-items-center rounded-lg hover:bg-raised lg:hidden">
+        <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="relative w-full max-w-sm">
+        <input id="gsearch" type="search" placeholder="Search orders, customers, products…" aria-label="Search everything"
+               class="h-9 w-full rounded-lg border border-slate-300 bg-transparent px-3 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-accent dark:border-slate-700">
+        <kbd aria-hidden="true" class="absolute right-2.5 top-2 hidden rounded border border-slate-300 px-1.5 text-xs text-slate-500 sm:block">/</kbd>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <button id="theme" aria-label="Toggle dark mode" class="grid size-9 place-items-center rounded-lg hover:bg-raised">
+          <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A8 8 0 1110 4a7 7 0 0010 10z"/></svg>
+        </button>
+        <div class="grid size-8 place-items-center rounded-full border border-slate-300 bg-raised text-xs font-semibold dark:border-slate-700" role="img" aria-label="Signed in as Maya Reyes">MR</div>
+      </div>
+    </header>
+
+    <main id="main" class="mx-auto w-full max-w-[1400px] flex-1 space-y-4 p-4 sm:p-6">
+      <!-- Page header -->
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-xl font-semibold">Overview</h1>
+          <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Store performance for the last 30 days. Updated 3 min ago.</p>
+        </div>
+        <div class="flex gap-2">
+          <select aria-label="Date range" class="h-9 rounded-lg border border-slate-300 bg-surface px-2 text-sm dark:border-slate-700">
+            <option>Last 30 days</option><option>Last 7 days</option><option>Today</option>
+          </select>
+          <button class="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-accent-fg hover:opacity-90 disabled:opacity-50">Create order</button>
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <section aria-label="Key metrics" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="rounded-xl border border-slate-200 bg-surface p-4 dark:border-slate-700/60">
+          <div class="text-sm text-slate-500 dark:text-slate-400">Revenue</div>
+          <div class="mt-1 text-2xl font-semibold tabular-nums">$48,210</div>
+          <div class="mt-1 text-sm"><span class="text-emerald-600 dark:text-emerald-400">▲ +8.4%</span> <span class="text-slate-500 dark:text-slate-400">vs previous 30 days</span></div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-surface p-4 dark:border-slate-700/60">
+          <div class="text-sm text-slate-500 dark:text-slate-400">Orders</div>
+          <div class="mt-1 text-2xl font-semibold tabular-nums">1,284</div>
+          <div class="mt-1 text-sm"><span class="text-emerald-600 dark:text-emerald-400">▲ +5.1%</span> <span class="text-slate-500 dark:text-slate-400">vs previous 30 days</span></div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-surface p-4 dark:border-slate-700/60">
+          <div class="text-sm text-slate-500 dark:text-slate-400">Refund rate</div>
+          <div class="mt-1 text-2xl font-semibold tabular-nums">2.7%</div>
+          <div class="mt-1 text-sm"><span class="text-red-600 dark:text-red-400">▲ +0.6 pts</span> <span class="text-slate-500 dark:text-slate-400">vs previous 30 days</span></div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-surface p-4 dark:border-slate-700/60">
+          <div class="text-sm text-slate-500 dark:text-slate-400">Avg. fulfilment time</div>
+          <div class="mt-1 text-2xl font-semibold tabular-nums">1.8 days</div>
+          <div class="mt-1 text-sm"><span class="text-emerald-600 dark:text-emerald-400">▼ −0.3 days</span> <span class="text-slate-500 dark:text-slate-400">vs previous 30 days</span></div>
+        </div>
+      </section>
+
+      <!-- Chart (2/3) + needs attention (1/3) -->
+      <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <section aria-labelledby="rev-h" class="rounded-xl border border-slate-200 bg-surface dark:border-slate-700/60 lg:col-span-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-4 dark:border-slate-700/60">
+            <h2 id="rev-h" class="text-sm font-semibold">Revenue, last 30 days (USD)</h2>
+            <button id="toggle-table" aria-pressed="false" class="h-8 rounded-lg border border-slate-300 px-3 text-sm hover:bg-raised dark:border-slate-700">View as table</button>
+          </div>
+          <div class="p-4">
+            <svg id="chart" viewBox="0 0 640 220" width="100%" role="img" aria-label="Line chart of daily revenue, rising from about $1,300 to $1,900 with a dip in week three"></svg>
+            <table id="chart-table" class="sr-only w-full text-left text-sm">
+              <caption>Weekly revenue</caption>
+              <thead><tr><th class="py-1">Week</th><th class="py-1">Revenue</th></tr></thead>
+              <tbody><tr><td>Week 1</td><td>$10,900</td></tr><tr><td>Week 2</td><td>$12,300</td></tr><tr><td>Week 3</td><td>$11,200</td></tr><tr><td>Week 4</td><td>$13,810</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+        <section aria-labelledby="att-h" class="rounded-xl border border-slate-200 bg-surface dark:border-slate-700/60">
+          <div class="border-b border-slate-200 p-4 dark:border-slate-700/60"><h2 id="att-h" class="text-sm font-semibold">Needs attention</h2></div>
+          <ul class="divide-y divide-slate-200 dark:divide-slate-700/60">
+            <li class="flex items-center justify-between gap-2 p-4"><a href="#" class="text-sm hover:underline">4 orders awaiting payment review</a><span class="inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400"><span class="size-1.5 rounded-full bg-current"></span>Review</span></li>
+            <li class="flex items-center justify-between gap-2 p-4"><a href="#" class="text-sm hover:underline">2 refunds pending approval</a><span class="inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400"><span class="size-1.5 rounded-full bg-current"></span>Pending</span></li>
+            <li class="flex items-center justify-between gap-2 p-4"><a href="#" class="text-sm hover:underline">Ceramic pour-over set: 3 left</a><span class="inline-flex items-center gap-1.5 rounded-full border border-red-600/30 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400"><span class="size-1.5 rounded-full bg-current"></span>Low stock</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- Data table -->
+      <section aria-labelledby="ord-h" class="overflow-hidden rounded-xl border border-slate-200 bg-surface dark:border-slate-700/60">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-4 dark:border-slate-700/60">
+          <h2 id="ord-h" class="text-sm font-semibold">Recent orders</h2>
+          <label class="sr-only" for="demo-state">Preview state</label>
+          <select id="demo-state" title="Preview a data state (remove in production)" class="h-8 rounded-lg border border-slate-300 bg-surface px-2 text-sm dark:border-slate-700">
+            <option value="ready">State: loaded</option><option value="loading">State: loading</option><option value="empty">State: empty</option><option value="error">State: error</option>
+          </select>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3 dark:border-slate-700/60">
+          <input id="tsearch" type="search" placeholder="Search by order or customer" aria-label="Search orders"
+                 class="h-9 w-64 rounded-lg border border-slate-300 bg-transparent px-3 text-sm placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-accent dark:border-slate-700">
+          <label class="sr-only" for="tstatus">Status</label>
+          <select id="tstatus" class="h-9 rounded-lg border border-slate-300 bg-surface px-2 text-sm dark:border-slate-700">
+            <option value="">All statuses</option><option>Paid</option><option>Pending</option><option>Failed</option><option>Shipped</option>
+          </select>
+          <span id="chips" class="flex flex-wrap items-center gap-1.5"></span>
+        </div>
+
+        <!-- Bulk bar -->
+        <div id="bulk" role="status" class="hidden items-center gap-3 border-b border-slate-200 bg-raised px-4 py-2 text-sm dark:border-slate-700/60">
+          <strong id="bulk-n" class="tabular-nums">0 selected</strong>
+          <button id="bulk-del" class="font-medium text-red-600 hover:underline">Cancel orders</button>
+          <button id="bulk-clear" class="ml-auto hover:underline">Clear</button>
+        </div>
+
+        <div id="table-wrap" data-view="ready">
+          <!-- Loading: skeleton matching the final layout -->
+          <div data-s="loading" class="hidden space-y-4 p-4" aria-hidden="true">
+            <div class="h-4 w-40 animate-pulse rounded bg-raised motion-reduce:animate-none"></div>
+            <div class="space-y-3">
+              <div class="h-4 w-full animate-pulse rounded bg-raised motion-reduce:animate-none"></div>
+              <div class="h-4 w-full animate-pulse rounded bg-raised motion-reduce:animate-none"></div>
+              <div class="h-4 w-full animate-pulse rounded bg-raised motion-reduce:animate-none"></div>
+              <div class="h-4 w-full animate-pulse rounded bg-raised motion-reduce:animate-none"></div>
+              <div class="h-4 w-2/3 animate-pulse rounded bg-raised motion-reduce:animate-none"></div>
+            </div>
+          </div>
+          <!-- Empty-from-filters -->
+          <div data-s="empty" class="hidden p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+            No orders match these filters. <button id="clear-filters" class="ml-1 font-medium text-accent hover:underline">Clear filters</button>
+          </div>
+          <!-- Empty (no data at all) -->
+          <div data-s="empty-all" class="hidden p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+            No orders yet. <button class="font-medium text-accent hover:underline">Create your first order</button>
+          </div>
+          <!-- Error -->
+          <div data-s="error" role="alert" class="hidden p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+            Orders couldn't be loaded — the server didn't respond.
+            <button id="retry" class="ml-1 font-medium text-accent hover:underline">Retry</button>
+          </div>
+          <!-- Table -->
+          <div data-s="ready">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr class="sticky top-14 z-10 border-b border-slate-200 bg-surface text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700/60">
+                    <th class="w-12 px-4 py-2"><input type="checkbox" id="sel-all" aria-label="Select all orders"></th>
+                    <th aria-sort="none" class="px-4 py-2 font-medium"><button data-sort="id" class="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100">Order ↕</button></th>
+                    <th aria-sort="none" class="px-4 py-2 font-medium"><button data-sort="customer" class="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100">Customer ↕</button></th>
+                    <th class="px-4 py-2 font-medium">Status</th>
+                    <th aria-sort="none" class="px-4 py-2 text-right font-medium"><button data-sort="total" class="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100">Total ↕</button></th>
+                    <th class="px-4 py-2 text-right font-medium">Placed</th>
+                    <th class="w-12 px-4 py-2"><span class="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="rows" class="divide-y divide-slate-200 dark:divide-slate-700/60"></tbody>
+              </table>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 p-3 text-sm text-slate-500 dark:border-slate-700/60">
+              <span id="count" class="tabular-nums"></span>
+              <div class="flex gap-2">
+                <button class="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-raised disabled:opacity-40 dark:border-slate-700" disabled>Previous</button>
+                <button class="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-raised disabled:opacity-40 dark:border-slate-700">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlg-t" class="rounded-xl border border-slate-200 bg-surface p-5 text-slate-900 backdrop:bg-black/50 dark:border-slate-700 dark:text-slate-100">
+  <h2 id="dlg-t" class="text-base font-semibold">Cancel orders</h2>
+  <p id="dlg-b" class="mt-2 text-sm text-slate-500 dark:text-slate-400">This cancels the selected orders and notifies the customers.</p>
+  <div class="mt-5 flex justify-end gap-2">
+    <button id="dlg-no" autofocus class="h-9 rounded-lg border border-slate-300 px-4 text-sm hover:bg-raised dark:border-slate-700">Keep orders</button>
+    <button id="dlg-yes" class="h-9 rounded-lg border border-red-600 px-4 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950">Cancel orders</button>
+  </div>
+</dialog>
+
+<div id="toast" role="status" class="fixed bottom-4 right-4 z-50 hidden items-center gap-3 rounded-lg bg-slate-900 px-4 py-2.5 text-sm text-white shadow-lg dark:bg-white dark:text-slate-900">
+  <span id="toast-t"></span><button id="toast-undo" class="underline">Undo</button>
+</div>
+
+<script>
+// ---------- Sample data: replace with the real API ----------
+const orders = [
+  {id:1042, customer:"Amara Okafor", status:"Paid", total:86.40, placed:"Sep 20"},
+  {id:1041, customer:"Jonas Lindqvist", status:"Pending", total:129.00, placed:"Sep 20"},
+  {id:1040, customer:"Priya Nair", status:"Shipped", total:54.90, placed:"Sep 19"},
+  {id:1039, customer:"Diego Alvarez", status:"Failed", total:212.15, placed:"Sep 19"},
+  {id:1038, customer:"Hana Sato", status:"Paid", total:37.00, placed:"Sep 18"},
+  {id:1037, customer:"Tomás Herrera", status:"Shipped", total:98.75, placed:"Sep 18"},
+];
+const tone = {Paid:"emerald", Pending:"amber", Failed:"red", Shipped:"sky"};
+const PILL = {
+  emerald:"inline-flex items-center gap-1.5 rounded-full border border-emerald-600/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400",
+  amber:  "inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400",
+  red:    "inline-flex items-center gap-1.5 rounded-full border border-red-600/30 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400",
+  sky:    "inline-flex items-center gap-1.5 rounded-full border border-sky-600/30 bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-700 dark:text-sky-400",
+};
+const $ = s => document.querySelector(s);
+let sort = {key:"id", dir:-1}, selected = new Set(), toastTimer;
+const fmt = new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"});
+
+function visible() {
+  const q = $("#tsearch").value.trim().toLowerCase(), st = $("#tstatus").value;
+  return orders.filter(o => (!st || o.status===st) && (!q || (o.id+" "+o.customer).toLowerCase().includes(q)))
+    .sort((a,b) => (a[sort.key] > b[sort.key] ? 1 : -1) * sort.dir);
+}
+function render() {
+  const list = visible();
+  $("#rows").innerHTML = list.map(o => `<tr class="cursor-pointer hover:bg-raised/60">
+    <td class="px-4 py-2"><input type="checkbox" data-id="${o.id}" aria-label="Select order #${o.id}" ${selected.has(o.id)?"checked":""}></td>
+    <td class="px-4 py-2 font-medium">#${o.id}</td><td class="px-4 py-2">${o.customer}</td>
+    <td class="px-4 py-2"><span class="${PILL[tone[o.status]]}"><span class="size-1.5 rounded-full bg-current"></span>${o.status}</span></td>
+    <td class="px-4 py-2 text-right tabular-nums">${fmt.format(o.total)}</td>
+    <td class="px-4 py-2 text-right tabular-nums">${o.placed}</td>
+    <td class="px-4 py-2 text-right"><button class="rounded-lg px-2 py-1 hover:bg-raised" aria-label="Actions for order #${o.id}">⋯</button></td></tr>`).join("");
+  $("#count").textContent = `Showing ${list.length} of ${orders.length} orders`;
+  const wrap = $("#table-wrap"), forced = $("#demo-state").value;
+  wrap.dataset.view = forced !== "ready" ? forced : (list.length ? "ready" : "empty");
+  $("#chips").innerHTML = $("#tstatus").value
+    ? `<span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-raised px-2.5 py-0.5 text-xs dark:border-slate-600">Status: ${$("#tstatus").value}<button aria-label="Remove filter: status is ${$("#tstatus").value}" data-chip>×</button></span>`
+    : "";
+  $("#bulk").classList.toggle("hidden", selected.size===0);
+  $("#bulk").classList.toggle("flex", selected.size>0);
+  $("#bulk-n").textContent = `${selected.size} selected`;
+  document.querySelectorAll("[data-sort]").forEach(b => b.parentElement.setAttribute("aria-sort", b.dataset.sort===sort.key ? (sort.dir>0?"ascending":"descending") : "none"));
+}
+function showState(v) {
+  document.querySelectorAll("[data-s]").forEach(el => el.classList.toggle("hidden", el.dataset.s !== v));
+}
+// Keep [data-s] blocks in sync with data-view (driven by render() + demo select)
+new MutationObserver(muts => muts.forEach(m => showState(m.target.dataset.view)))
+  .observe($("#table-wrap"), {attributes:true, attributeFilter:["data-view"]});
+
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-sort]");
+  if (s) { sort = {key:s.dataset.sort, dir: sort.key===s.dataset.sort ? -sort.dir : 1}; render(); }
+  if (e.target.closest("[data-chip]") || e.target.id==="clear-filters") { $("#tstatus").value=""; $("#tsearch").value=""; render(); }
+});
+// Row click opens detail; ignore clicks on the checkbox and kebab button.
+$("#rows").addEventListener("click", e => { if (!e.target.closest("input,button")) { /* open order #… detail */ } });
+$("#rows").addEventListener("change", e => { const id=+e.target.dataset.id; e.target.checked ? selected.add(id) : selected.delete(id); render(); });
+$("#sel-all").addEventListener("change", e => { visible().forEach(o => e.target.checked ? selected.add(o.id) : selected.delete(o.id)); render(); });
+["#tsearch","#tstatus","#demo-state"].forEach(s => $(s).addEventListener("input", render));
+$("#retry").addEventListener("click", () => { $("#demo-state").value="ready"; render(); });
+$("#bulk-clear").addEventListener("click", () => { selected.clear(); render(); });
+
+// Destructive action: confirm in <dialog>, then toast with Undo
+$("#bulk-del").addEventListener("click", () => { $("#dlg-b").textContent = `This cancels ${selected.size} order(s) and notifies the customers.`; $("#dlg").showModal(); });
+$("#dlg-no").addEventListener("click", () => $("#dlg").close());
+$("#dlg-yes").addEventListener("click", () => {
+  $("#dlg").close();
+  const n = selected.size; selected.clear(); render();
+  $("#toast-t").textContent = `${n} order(s) cancelled`;
+  $("#toast").classList.replace("hidden","flex");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("#toast").classList.replace("flex","hidden"), 5000);
+});
+$("#toast-undo").addEventListener("click", () => $("#toast").classList.replace("flex","hidden"));
+
+// Shell behaviour
+const sidebar = $("#sidebar"), backdrop = $("#backdrop");
+function setDrawer(open) {
+  sidebar.classList.toggle("-translate-x-full", !open);
+  backdrop.classList.toggle("hidden", !open);
+  $("#menu").setAttribute("aria-expanded", open);
+  document.body.classList.toggle("overflow-hidden", open); // lock scroll behind drawer
+}
+$("#menu").addEventListener("click", () => setDrawer(!sidebar.classList.contains("-translate-x-full")));
+backdrop.addEventListener("click", () => setDrawer(false));
+addEventListener("keydown", e => { if (e.key === "Escape") setDrawer(false); });
+
+$("#theme").addEventListener("click", () => {
+  const dark = document.documentElement.classList.toggle("dark");
+  try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch {}
+});
+document.addEventListener("keydown", e => {
+  if ((e.key==="/" && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) || ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="k")) {
+    e.preventDefault(); $("#gsearch").focus();
+  }
+});
+
+// Chart: one inline SVG polyline. No chart library. (Play CDN compiles the
+// classes injected here at runtime.)
+(function chart(){
+  const data=[1300,1350,1420,1380,1450,1500,1480,1420,1390,1350,1300,1280,1340,1400,1520,1580,1610,1560,1600,1650,1700,1690,1720,1780,1800,1760,1830,1870,1900,1880];
+  const W=640,H=220,p={l:48,r:12,t:12,b:24}, min=1000,max=2000;
+  const x=i=>p.l+i*(W-p.l-p.r)/(data.length-1), y=v=>p.t+(1-(v-min)/(max-min))*(H-p.t-p.b);
+  let g="";
+  [1000,1250,1500,1750,2000].forEach(v=>{ g+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y(v)}" y2="${y(v)}" class="stroke-slate-200 dark:stroke-slate-700"/><text x="${p.l-8}" y="${y(v)+4}" text-anchor="end" font-size="11" class="fill-slate-400">$${(v/1000).toFixed(2).replace(/\.?0+$/,"")}k</text>`; });
+  const d=data.map((v,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  $("#chart").innerHTML = g + `<path d="${d}" fill="none" class="stroke-accent" stroke-width="2.5" stroke-linejoin="round"/><text x="${p.l}" y="${H-4}" font-size="11" class="fill-slate-400">Aug 22</text><text x="${W-p.r}" y="${H-4}" text-anchor="end" font-size="11" class="fill-slate-400">Sep 20</text>`;
+})();
+$("#toggle-table").addEventListener("click", e => {
+  const on = e.currentTarget.getAttribute("aria-pressed")==="false";
+  e.currentTarget.setAttribute("aria-pressed", on);
+  e.currentTarget.textContent = on ? "View as chart" : "View as table";
+  $("#chart").classList.toggle("hidden", on);
+  $("#chart-table").classList.toggle("sr-only", !on);
+});
+render();
+</script>
+</body>
+</html>

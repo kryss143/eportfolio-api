@@ -26,8 +26,11 @@ class Project extends Model
 
     protected $casts = [
         'status' => ProjectStatus::class,
-        'technologies' => 'array',
-        'metrics' => 'array',
+        // 'json' rather than 'array' (audit F4, 2026-09-28): the MongoDB
+        // package stores these as JSON-encoded strings, and 'array' triggers
+        // a USER_DEPRECATED on every write. Both casts decode to PHP arrays.
+        'technologies' => 'json',
+        'metrics' => 'json',
         'featured' => 'boolean',
     ];
 }

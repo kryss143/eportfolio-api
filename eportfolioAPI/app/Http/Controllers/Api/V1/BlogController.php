@@ -35,13 +35,18 @@ class BlogController extends Controller
                 });
             }
 
-            if ($request->filled('status')) {
+            if ($validated['status'] ?? null) {
                 // 'published' = has date, 'draft'/'unpublished' = no date
                 if ($validated['status'] === 'published') {
                     $query->whereNotNull('date');
                 } else {
                     $query->whereNull('date');
                 }
+            } else {
+                // Drafts (date IS NULL) are never public by default — same
+                // invariant the landing page and dashboard use (audit F2,
+                // 2026-09-28). Explicit ?status=draft remains available.
+                $query->whereNotNull('date');
             }
 
             $sort = $validated['sort'] ?? 'date';
@@ -56,8 +61,10 @@ class BlogController extends Controller
 
     public function show(string $slug): JsonResponse
     {
+        // Drafts (date IS NULL) are never publicly readable — matches the
+        // index() default and the landing page invariant (audit F2).
         $blog = $this->withFallbackSingle(
-            fn () => Blog::where('slug', $slug)->first(),
+            fn () => Blog::where('slug', $slug)->whereNotNull('date')->first(),
             'blogs',
             'slug',
             $slug

@@ -1,20 +1,39 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Blueprint as SqlBlueprint;
 use Illuminate\Support\Facades\Schema;
+use MongoDB\Laravel\Schema\Blueprint;
 
 return new class extends Migration
 {
-    // Legacy SQLite schema (jobs/job_batches/failed_jobs). Kept for tests and
-    // rollback; runtime queue now uses the mongodb connection.
-    public $connection = 'sqlite';
-    /**
-     * Run the migrations.
-     */
+    // Queue lives on MongoDB (mongodb queue driver: _id = uuid, queue,
+    // payload, attempts, reserved_at, available_at, created_at). In the test
+    // env (Mongo offline, sqlite default) the legacy SQL tables are created.
     public function up(): void
     {
-        Schema::create('jobs', function (Blueprint $table) {
+        if ($this->mongoSchema()) {
+            Schema::create('jobs', function (Blueprint $collection) {
+                $collection->index(['queue', 'available_at'], null, null, ['name' => 'idx_queue_available_at']);
+            });
+
+            Schema::create('job_batches', function (Blueprint $collection) {
+                $collection->index('batch_id', null, null, ['unique' => true, 'name' => 'uniq_batch_id']);
+            });
+
+            Schema::create('failed_jobs', function (Blueprint $collection) {
+                // Failed driver "database-uuids" writes: id (uuid), uuid,
+                // connection, queue, payload, exception, failed_at.
+                $collection->index('uuid', null, null, ['unique' => true, 'name' => 'uniq_uuid']);
+                $collection->index('failed_at', null, null, ['name' => 'idx_failed_at']);
+            });
+
+            return;
+        }
+
+        // ---- Legacy SQL schema (test fallback) --------------------------------
+
+        Schema::create('jobs', function (SqlBlueprint $table) {
             $table->id();
             $table->string('queue')->index();
             $table->longText('payload');
@@ -24,7 +43,7 @@ return new class extends Migration
             $table->unsignedInteger('created_at');
         });
 
-        Schema::create('job_batches', function (Blueprint $table) {
+        Schema::create('job_batches', function (SqlBlueprint $table) {
             $table->string('id')->primary();
             $table->string('name');
             $table->integer('total_jobs');
@@ -37,7 +56,7 @@ return new class extends Migration
             $table->integer('finished_at')->nullable();
         });
 
-        Schema::create('failed_jobs', function (Blueprint $table) {
+        Schema::create('failed_jobs', function (SqlBlueprint $table) {
             $table->id();
             $table->string('uuid')->unique();
             $table->string('connection');
@@ -50,13 +69,15 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('jobs');
-        Schema::dropIfExists('job_batches');
-        Schema::dropIfExists('failed_jobs');
+        foreach (['jobs', 'job_batches', 'failed_jobs'] as $table) {
+            Schema::dropIfExists($table);
+        }
+    }
+
+    private function mongoSchema(): bool
+    {
+        return ! app()->environment('testing') && \App\Support\MongoProbe::available();
     }
 };

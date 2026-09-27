@@ -27,7 +27,14 @@ class AppServiceProvider extends ServiceProvider
         // row actions that would fail — mock rows when Mongo is down entirely
         // (mongoAvailable), real rows during a primary partition
         // (mongoWritable, strict-primary probe).
-        View::composer('admin.*', function ($view) {
+        //
+        // Audit r3 F2 (2026-09-28): scoped to the views that actually consume
+        // the variables — the shared layout (banner) and the index views (row
+        // action gating). The previous 'admin.*' wildcard fired the
+        // write-probe on the public login page and every create/edit form,
+        // adding up to a full probe cycle (~2.5s when Mongo is down) to
+        // unauthenticated traffic for data those views never read.
+        View::composer(['admin.layouts.app', 'admin.*.index'], function ($view) {
             $view->with('mongoAvailable', $this->mongoAvailable());
             $view->with('mongoWritable', MongoProbe::writeAvailable());
         });

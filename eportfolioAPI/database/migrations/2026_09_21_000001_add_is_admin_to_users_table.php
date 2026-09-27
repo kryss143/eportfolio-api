@@ -1,25 +1,41 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Blueprint as SqlBlueprint;
 use Illuminate\Support\Facades\Schema;
+use MongoDB\Laravel\Schema\Blueprint;
 
 return new class extends Migration
 {
-    // Legacy SQLite schema (see 0001_01_01_000000).
-    public $connection = 'sqlite';
-
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('is_admin')->default(false)->after('password');
+        if ($this->mongoSchema()) {
+            // Schemaless: the model simply writes is_admin.
+            Schema::table('users', function (Blueprint $collection) {
+                //
+            });
+
+            return;
+        }
+
+        // ---- Legacy SQL schema (test fallback) --------------------------------
+
+        Schema::table('users', function (SqlBlueprint $table) {
+            $table->boolean('is_admin')->default(false);
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('is_admin');
-        });
+        if (! $this->mongoSchema()) {
+            Schema::table('users', function (SqlBlueprint $table) {
+                $table->dropColumn('is_admin');
+            });
+        }
+    }
+
+    private function mongoSchema(): bool
+    {
+        return ! app()->environment('testing') && \App\Support\MongoProbe::available();
     }
 };

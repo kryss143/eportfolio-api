@@ -3,151 +3,145 @@
 @section('title', 'Overview')
 
 @section('content')
-<div class="space-y-6">
+@php
+    $maxCategoryCount = $skillsByCategory ? max($skillsByCategory) : 0;
+    $draftBlogs = $recentBlogs->filter(fn ($blog) => empty($blog->date))->count();
+@endphp
+<div class="space-y-4">
     {{-- Page header --}}
-    <div class="flex items-end justify-between gap-4 flex-wrap">
+    <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold">Overview</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Portfolio admin dashboard. Updated {{ now()->diffForHumans() }}.</p>
+            <h1 class="text-xl font-semibold">Overview</h1>
+            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Portfolio content at a glance. Updated {{ now()->diffForHumans() }}.</p>
         </div>
     </div>
 
     {{-- KPI row --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="kpi-card">
+    <section aria-label="Key metrics" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
             <div class="text-sm text-gray-500 dark:text-gray-400">Projects</div>
-            <div class="text-2xl font-semibold mt-1 tabular-nums">{{ $stats['projects'] }}</div>
-            <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ $projectsByStatus['built'] }} built, {{ $projectsByStatus['in-progress'] }} in progress</div>
+            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ $stats['projects'] }}</div>
+            <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $projectsByStatus['built'] }} built, {{ $projectsByStatus['in-progress'] }} in progress</div>
         </div>
-        <div class="kpi-card">
-            <div class="text-sm text-gray-500 dark:text-gray-400">Blog Posts</div>
-            <div class="text-2xl font-semibold mt-1 tabular-nums">{{ $stats['blogs'] }}</div>
-            <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">Published content</div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+            <div class="text-sm text-gray-500 dark:text-gray-400">Blog posts</div>
+            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ $stats['blogs'] }}</div>
+            <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $draftBlogs > 0 ? $draftBlogs.' draft(s) to publish' : 'All published' }}</div>
         </div>
-        <div class="kpi-card">
-            <div class="text-sm text-gray-500 dark:text-gray-400">Tech Skills</div>
-            <div class="text-2xl font-semibold mt-1 tabular-nums">{{ $stats['tech_skills'] }}</div>
-            <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ count($skillsByCategory) }} categories</div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+            <div class="text-sm text-gray-500 dark:text-gray-400">Tech skills</div>
+            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ $stats['tech_skills'] }}</div>
+            <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ count($skillsByCategory) }} categor{{ count($skillsByCategory) === 1 ? 'y' : 'ies' }}</div>
         </div>
-        <div class="kpi-card">
-            <div class="text-sm text-gray-500 dark:text-gray-400">Users</div>
-            <div class="text-2xl font-semibold mt-1 tabular-nums">{{ $stats['users'] }}</div>
-            <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">Registered accounts</div>
-        </div>
-    </div>
+    </section>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {{-- Projects by status chart --}}
-        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-            <h2 class="text-sm font-semibold mb-4">Projects by Status</h2>
-            <div class="space-y-3">
-                <div class="flex items-center gap-3">
-                    <div class="flex-1">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>Built</span>
-                            <span class="tabular-nums">{{ $projectsByStatus['built'] }}</span>
-                        </div>
-                        <div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500 rounded-full" style="width: {{ $stats['projects'] > 0 ? ($projectsByStatus['built'] / $stats['projects'] * 100) : 0 }}%"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="flex-1">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>In Progress</span>
-                            <span class="tabular-nums">{{ $projectsByStatus['in-progress'] }}</span>
-                        </div>
-                        <div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-amber-500 rounded-full" style="width: {{ $stats['projects'] > 0 ? ($projectsByStatus['in-progress'] / $stats['projects'] * 100) : 0 }}%"></div>
-                        </div>
-                    </div>
-                </div>
+    {{-- Chart (2/3) + needs attention (1/3) --}}
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <section aria-labelledby="skills-h" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 lg:col-span-2">
+            <div class="border-b border-gray-200 p-4 dark:border-gray-800">
+                <h2 id="skills-h" class="text-sm font-semibold">Tech skills by category ({{ $stats['tech_skills'] }} total)</h2>
             </div>
-        </div>
-
-        {{-- Skills by category --}}
-        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-            <h2 class="text-sm font-semibold mb-4">Skills by Category</h2>
-            <div class="space-y-2">
-                @forelse ($skillsByCategory as $category => $count)
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="capitalize">{{ $category }}</span>
-                        <span class="tabular-nums text-gray-500 dark:text-gray-400">{{ $count }}</span>
+            @if ($maxCategoryCount > 0)
+                <div class="p-4">
+                    {{-- Bar chart in plain utilities: bars start at zero, ≤ one series. --}}
+                    <div class="flex h-44 items-end gap-3" role="img" aria-label="Bar chart of tech skill counts per category">
+                        @foreach ($skillsByCategory as $category => $count)
+                            <div class="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
+                                <span class="text-sm font-medium tabular-nums">{{ $count }}</span>
+                                <div class="w-full max-w-16 rounded-t-md bg-indigo-500/80 hover:bg-indigo-500 dark:bg-indigo-500/70 dark:hover:bg-indigo-400"
+                                    style="height: {{ max(4, (int) round($count / $maxCategoryCount * 100)) }}%"></div>
+                                <span class="w-full truncate text-center text-xs text-gray-500 capitalize dark:text-gray-400" title="{{ ucfirst($category) }}">{{ $category }}</span>
+                            </div>
+                        @endforeach
                     </div>
-                @empty
-                    <p class="text-sm text-gray-400">No tech skills yet.</p>
-                @endforelse
-            </div>
-        </div>
-
-        {{-- Needs attention --}}
-        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-            <h2 class="text-sm font-semibold mb-4">Needs Attention</h2>
-            @if (count($needsAttention) > 0)
-                <div class="space-y-2">
-                    @foreach ($needsAttention as $item)
-                        <a href="{{ $item['link'] }}" class="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 text-sm">
-                            <span>{{ $item['message'] }}</span>
-                            <span class="status-pill status-pill-{{ $item['type'] }}">{{ $item['type'] }}</span>
-                        </a>
-                    @endforeach
+                    {{-- Accessible alternative to the chart --}}
+                    <table class="sr-only">
+                        <caption>Tech skills per category</caption>
+                        <thead><tr><th scope="col">Category</th><th scope="col">Skills</th></tr></thead>
+                        <tbody>
+                            @foreach ($skillsByCategory as $category => $count)
+                                <tr><td>{{ ucfirst($category) }}</td><td class="tabular-nums">{{ $count }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             @else
-                <p class="text-sm text-gray-400">Everything looks good!</p>
+                <div class="p-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                    No tech skills yet.
+                    <a href="{{ route('admin.tech-skills.create') }}" class="ml-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400">Add your first skill</a>
+                </div>
             @endif
-        </div>
+        </section>
+
+        <section aria-labelledby="attention-h" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+            <div class="border-b border-gray-200 p-4 dark:border-gray-800">
+                <h2 id="attention-h" class="text-sm font-semibold">Needs attention</h2>
+            </div>
+            @if (count($needsAttention) > 0)
+                <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+                    @foreach ($needsAttention as $item)
+                        <li>
+                            <a href="{{ $item['link'] }}" class="flex items-center justify-between gap-2 p-4 text-sm hover:bg-gray-50 dark:hover:bg-white/5">
+                                <span>{{ $item['message'] }}</span>
+                                <x-pill :tone="$item['type']">{{ ucfirst($item['type']) }}</x-pill>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @else
+                <div class="p-10 text-center text-sm text-gray-500 dark:text-gray-400">Everything looks good!</div>
+            @endif
+        </section>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {{-- Recent blogs --}}
-        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-            <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-sm font-semibold">Recent Blog Posts</h2>
-                <a href="{{ route('admin.blogs.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View all</a>
+    {{-- Recent blogs + recent activity --}}
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <section aria-labelledby="recent-blogs-h" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+            <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+                <h2 id="recent-blogs-h" class="text-sm font-semibold">Recent blog posts</h2>
+                <a href="{{ route('admin.blogs.index') }}" class="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">View all</a>
             </div>
             @if ($recentBlogs->count() > 0)
-                <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
+                <ul class="divide-y divide-gray-200 dark:divide-gray-800">
                     @foreach ($recentBlogs as $blog)
-                        <div class="px-5 py-3 flex items-center justify-between gap-3">
+                        <li class="flex items-center justify-between gap-3 p-4">
                             <div class="min-w-0">
-                                <p class="text-sm font-medium truncate">{{ $blog->title }}</p>
-                                <p class="text-xs text-gray-400">{{ $blog->date ? (is_string($blog->date) ? \Carbon\Carbon::parse($blog->date)->format('M d, Y') : $blog->date->format('M d, Y')) : 'Draft' }}</p>
+                                <p class="truncate text-sm font-medium">{{ $blog->title }}</p>
+                                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $blog->date ? \Carbon\Carbon::parse($blog->date)->format('M d, Y') : 'Unpublished draft' }}</p>
                             </div>
-                            <span class="status-pill {{ $blog->date ? 'status-pill-success' : 'status-pill-neutral' }}">
-                                <span>{{ $blog->date ? 'Published' : 'Draft' }}</span>
-                            </span>
-                        </div>
+                            <x-pill :tone="$blog->date ? 'success' : 'neutral'">{{ $blog->date ? 'Published' : 'Draft' }}</x-pill>
+                        </li>
                     @endforeach
-                </div>
+                </ul>
             @else
-                <div class="px-5 py-8 text-center text-sm text-gray-400">No blog posts yet.</div>
+                <div class="p-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                    No blog posts yet.
+                    <a href="{{ route('admin.blogs.create') }}" class="ml-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400">Write your first post</a>
+                </div>
             @endif
-        </div>
+        </section>
 
-        {{-- Recent activity --}}
-        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-            <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-sm font-semibold">Recent Activity</h2>
-                <a href="{{ route('admin.activity.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View all</a>
+        <section aria-labelledby="recent-activity-h" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+            <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+                <h2 id="recent-activity-h" class="text-sm font-semibold">Recent activity</h2>
+                <a href="{{ route('admin.activity.index') }}" class="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">View all</a>
             </div>
             @if ($recentActivity->count() > 0)
-                <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
+                <ul class="divide-y divide-gray-200 dark:divide-gray-800">
                     @foreach ($recentActivity as $activity)
-                        <div class="px-5 py-3 text-sm">
+                        <li class="p-4 text-sm">
                             <p>
                                 <span class="font-medium">{{ $activity->user?->name ?? 'System' }}</span>
-                                <span class="text-gray-500 dark:text-gray-400">{{ $activity->event }}</span>
-                                <span class="text-gray-500 dark:text-gray-400">{{ class_basename($activity->subject_type) }}</span>
+                                <span class="text-gray-500 dark:text-gray-400">{{ $activity->event }} {{ class_basename($activity->subject_type) }}</span>
                             </p>
-                            <p class="text-xs text-gray-400 mt-0.5">{{ $activity->created_at->diffForHumans() }}</p>
-                        </div>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $activity->created_at->diffForHumans() }}</p>
+                        </li>
                     @endforeach
-                </div>
+                </ul>
             @else
-                <div class="px-5 py-8 text-center text-sm text-gray-400">No activity yet.</div>
+                <div class="p-10 text-center text-sm text-gray-500 dark:text-gray-400">No activity yet.</div>
             @endif
-        </div>
+        </section>
     </div>
 </div>
 @endsection

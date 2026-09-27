@@ -49,7 +49,15 @@ class LandingController extends Controller
 
         if (! $hasContent) {
             $projects = MockDataService::get('projects');
-            $blogs = MockDataService::get('blogs');
+            // Mirror the DB branch's semantics (audit r3 F3, 2026-09-28):
+            // published-only, newest first. The mock JSON happens to be in
+            // date order today, but the DB path applies whereNotNull('date')
+            // + orderByDesc('date') — the degraded path must agree.
+            $blogs = collect(MockDataService::get('blogs'))
+                ->filter(fn ($b) => ! empty($b['date']))
+                ->sortByDesc('date')
+                ->values()
+                ->all();
             $metrics = MockDataService::get('metrics');
             $techSkills = MockDataService::get('tech_skills');
             $experience = MockDataService::get('experiences')[0] ?? null;

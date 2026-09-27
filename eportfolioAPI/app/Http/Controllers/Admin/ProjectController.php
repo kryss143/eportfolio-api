@@ -107,6 +107,13 @@ class ProjectController extends Controller
 
     public function update(Request $request, Project $project)
     {
+        // Audit F3 (2026-09-28): update() lacked the Mongo-down guard that
+        // store/destroy/toggle/bulk already carry (bug #5 series) — during a
+        // primary partition the submit 500'd after the admin filled the form.
+        if ($redirect = $this->denyWhenMongoDown('admin.projects.index')) {
+            return $redirect;
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
