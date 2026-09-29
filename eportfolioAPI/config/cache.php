@@ -47,9 +47,9 @@ return [
             'lock_table' => env('DB_CACHE_LOCK_TABLE'),
         ],
 
-        // MongoDB store provided by mongodb/laravel-mongodb. Expects a
-        // `cache` collection (created on demand); run
-        // app:migrate-sqlite-to-mongodb to create the TTL indexes.
+        // MongoDB store provided by mongodb/laravel-mongodb. The `cache` and
+        // `cache_locks` collections and their TTL indexes are created by the
+        // 0001_01_01_000001_create_cache_table migration.
         'mongodb' => [
             'driver' => 'mongodb',
             'connection' => env('DB_CACHE_CONNECTION', 'mongodb'),

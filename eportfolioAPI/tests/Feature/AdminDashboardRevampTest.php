@@ -3,33 +3,26 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Support\MongoProbe;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CleansMongoCollections;
 use Tests\TestCase;
 
 /**
  * Smoke tests for the admin-dashboard revamp (2026-09-28): every admin page
  * must render through the new utility-based layout/components with no Blade
- * errors. Mongo is pinned to a closed port (phpunit.xml), so these exercise
- * the degraded mock-data path — exactly the path the new empty/pill states
- * were designed for.
+ * errors. Runs against the live testing cluster
+ * (MONGODB_DATABASE=eportfolio_testing) with collections dropped per test —
+ * the empty states render from genuinely empty collections.
  */
 class AdminDashboardRevampTest extends TestCase
 {
-    // In tests the default connection is sqlite (:memory:) and the schema
-    // migrations build the legacy SQL tables there (Mongo is pinned offline);
-    // RefreshDatabase migrates/resets that store per test.
-    use RefreshDatabase;
     use CleansMongoCollections;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // No-op while Mongo is pinned offline; keeps the suite safe if the
-        // pin is ever lifted to test against a live MongoDB.
         $this->cleanMongoCollections();
+        $this->artisan('migrate', ['--force' => true]);
     }
 
     private function admin(): User
@@ -79,6 +72,14 @@ class AdminDashboardRevampTest extends TestCase
 
     public function test_dashboard_chart_has_accessible_alternative(): void
     {
+        // The sr-only caption lives in the chart branch, which renders only
+        // when at least one tech skill exists; seed one so it does.
+        \App\Models\TechSkill::create([
+            'category' => \App\Enums\TechCategory::Backend,
+            'logo' => './devicons/php-original.svg',
+            'label' => 'PHP',
+        ]);
+
         $response = $this->actingAs($this->admin())->get('/admin');
 
         $response->assertOk();

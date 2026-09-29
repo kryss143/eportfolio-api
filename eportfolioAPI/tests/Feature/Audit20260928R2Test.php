@@ -2,9 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Admin\BlogController;
 use App\Support\MongoProbe;
-use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use MongoDB\Driver\Exception\ConnectionTimeoutException;
 use ReflectionProperty;
@@ -13,9 +11,9 @@ use Tests\TestCase;
 /**
  * Regression tests for the r2 audit fixes (bugs-reported/AUDIT-app-2026-09-28-r2.md).
  *
- * phpunit.xml pins MONGODB_URI to a closed port, so Mongo is deterministically
- * unavailable: API/admin endpoints exercise their mock-fallback paths, and the
- * probe tests run against the real (failing-fast) probe logic.
+ * Mongo-outage scenarios simulate the outage by overriding the mongodb DSN to
+ * a closed port (per-test) instead of a global phpunit pin — the rest of the
+ * suite runs against the live eportfolio_testing database.
  */
 class Audit20260928R2Test extends TestCase
 {
@@ -23,14 +21,9 @@ class Audit20260928R2Test extends TestCase
     {
         parent::setUp();
 
-        MongoProbe::flush();
-    }
-
-    protected function tearDown(): void
-    {
-        MongoProbe::flush();
-
-        parent::tearDown();
+        // These tests are all about degraded/offline behaviour: simulate the
+        // outage up front. Live-Mongo coverage lives in the other suites.
+        $this->pinMongoDown();
     }
 
     // ------------------------------------------------------------------
@@ -41,7 +34,7 @@ class Audit20260928R2Test extends TestCase
     private function fallbackHarness(bool $collectionHasDocuments)
     {
         // Anonymous controller using the real trait, with collectionHasDocuments()
-        // overridden so both branches are testable without a live MongoDB.
+        // overridden so both branches are testable without touching MongoDB.
         return new class($collectionHasDocuments)
         {
             use \App\Http\Controllers\Api\V1\FallbackData;
@@ -103,7 +96,7 @@ class Audit20260928R2Test extends TestCase
     public function test_probe_memoizes_within_ttl(): void
     {
         $first = microtime(true);
-        $this->assertFalse(MongoProbe::available(), 'probe must fail with Mongo pinned down');
+        $this->assertFalse(MongoProbe::available(), 'probe must fail with the pinned DSN');
         $firstTook = microtime(true) - $first;
         $this->assertGreaterThan(0.05, $firstTook, 'first call should have actually probed the server');
 
@@ -153,7 +146,7 @@ class Audit20260928R2Test extends TestCase
         // title-only filter returned nothing for it.
         request()->merge(['search' => 'breakdown']);
 
-        $view = app(BlogController::class)->index(request());
+        $view = app(\App\Http\Controllers\Admin\BlogController::class)->index(request());
         $blogs = $view->getData()['blogs'];
 
         $slugs = collect($blogs->items())->pluck('slug');

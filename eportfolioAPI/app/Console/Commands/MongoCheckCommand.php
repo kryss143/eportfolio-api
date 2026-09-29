@@ -24,7 +24,8 @@ use Throwable;
 class MongoCheckCommand extends Command
 {
     protected $signature = 'mongo:check
-                            {--wait=2 : Seconds to keep retrying each probe before giving up}';
+                            {--wait=2 : Seconds to keep retrying each probe before giving up}
+                            {--indexes : Also diff every collection\'s indexes against the MongoSchema declarations (Bug 2 doctor)}';
 
     protected $description = 'Check MongoDB read/write availability and print the exact driver error (diagnoses the read-only sample-data banner)';
 
@@ -85,6 +86,10 @@ class MongoCheckCommand extends Command
         $readOk = MongoProbe::available($waitMs);
         $writeOk = MongoProbe::writeAvailable($waitMs);
 
+        if ($writeOk && $this->option('indexes')) {
+            return $this->checkIndexes();
+        }
+
         $this->renderProbe('Read availability (any node)', $readOk);
         $this->renderProbe('Write availability (primary)', $writeOk);
 
@@ -111,6 +116,68 @@ class MongoCheckCommand extends Command
                 $this->line('  '.$line);
             }
             $this->renderHints($detail);
+        }
+
+        return self::FAILURE;
+    }
+
+    /**
+     * Bug 2 doctor: diff each collection's actual indexes against the specs
+     * the migrations declare through MongoSchema, and repair same-name
+     * different-key drift (the code-86 source) via ensureIndexes. Exit 0 when
+     * everything matches after the pass.
+     */
+    private function checkIndexes(): int
+    {
+        $db = DB::connection('mongodb')->getDatabase();
+        $declared = \App\Support\MongoSchema::declaredIndexes();
+
+        $this->newLine();
+        $this->info('Index audit (MongoSchema is the single authority):');
+
+        $problems = 0;
+        foreach ($declared as $collection => $indexes) {
+            $exists = in_array($collection, $db->listCollectionNames()->toArray(), true);
+            if (! $exists) {
+                $this->line("  <fg=yellow>{$collection}: collection missing — run migrate</>");
+                $problems++;
+
+                continue;
+            }
+
+            // Repair drift + create missing (idempotent, same code path the
+            // migrations use — this run converges the database to the specs).
+            \App\Support\MongoSchema::ensureIndexes($collection, $indexes);
+
+            $actual = [];
+            foreach ($db->selectCollection($collection)->listIndexes() as $index) {
+                $actual[$index['name']] = $index['key'];
+            }
+
+            foreach ($indexes as $def) {
+                $key = \App\Support\MongoSchema::normalizeKeyForReport($def['key']);
+                if (($actual[$def['name']] ?? null) !== null) {
+                    $actualKey = \App\Support\MongoSchema::normalizeKeyForReport($actual[$def['name']]);
+                    if ($actualKey === $key) {
+                        $this->line("  <fg=green>✔</> {$collection}.{$def['name']} {$key}");
+
+                        continue;
+                    }
+                    $this->line("  <fg=red>✘ {$collection}.{$def['name']} key drift: want {$key}, have {$actualKey}</>");
+                    $problems++;
+
+                    continue;
+                }
+                $this->line("  <fg=red>✘ {$collection}.{$def['name']} missing (create failed — see log)</>");
+                $problems++;
+            }
+        }
+
+        if ($problems === 0) {
+            $this->newLine();
+            $this->info('✔ All declared indexes match.');
+
+            return self::SUCCESS;
         }
 
         return self::FAILURE;

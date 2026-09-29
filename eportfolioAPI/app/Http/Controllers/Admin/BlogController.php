@@ -21,7 +21,10 @@ class BlogController extends Controller
                 // Search title + excerpt, matching the live-DB query below
                 // (audit r2 F3, 2026-09-28: degraded mode must agree with the
                 // healthy path).
-                $items = array_values(array_filter($items, fn ($b) => str_contains($b['title'] ?? '', $search) || str_contains($b['excerpt'] ?? '', $search)));
+                // Audit post-mongo Bug 6: the package's `like` operator is
+                // case-insensitive on Mongo — the degraded filter must be too.
+                $needle = mb_strtolower($search);
+                $items = array_values(array_filter($items, fn ($b) => str_contains(mb_strtolower($b['title'] ?? ''), $needle) || str_contains(mb_strtolower($b['excerpt'] ?? ''), $needle)));
             }
             $blogs = $this->mockPaginate($items);
 
@@ -78,8 +81,8 @@ class BlogController extends Controller
             'excerpt' => ['required', 'string'],
             'date' => ['nullable', 'date'],
             'readTime' => ['required', 'string', 'max:50'],
-            // Bug #3: use the model class so the presence verifier resolves the
-            // model's mongodb connection instead of the default (sqlite) one.
+            // Bug #3: use the model class so the presence verifier resolves
+            // the model's mongodb connection.
             'slug' => ['required', 'string', 'max:255', 'unique:'.Blog::class.',slug'],
             'content' => ['required', 'string'],
         ]);
@@ -153,12 +156,22 @@ class BlogController extends Controller
             return $redirect;
         }
 
+        // Audit post-mongo Bug 7: ids must be well-formed ObjectIds, not
+        // arbitrary strings reaching the driver.
         $request->validate([
             'ids' => ['required', 'array'],
-            'ids.*' => ['string'],
+            'ids.*' => ['string', 'regex:/^[a-f0-9]{24}$/i'],
         ]);
 
-        $count = Blog::whereIn('_id', $request->input('ids'))->delete();
+        // Audit post-mongo Bug 4: delete models one by one (like the project
+        // controller) so ActivityObserver::deleted() fires for each. The
+        // previous query-builder mass delete never instantiated models and
+        // left bulk blog deletions with ZERO audit trail.
+        $blogs = Blog::whereIn('_id', $request->input('ids'))->get();
+        $count = 0;
+        foreach ($blogs as $blog) {
+            $count += $blog->delete() ? 1 : 0;
+        }
 
         return redirect()->route('admin.blogs.index')
             ->with('success', "{$count} blog post(s) deleted.");

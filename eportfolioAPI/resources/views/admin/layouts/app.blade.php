@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <title>@yield('title', 'Overview') — {{ config('app.name', 'EPortfolio') }} Admin</title>
     {{-- Apply the saved theme before first paint to avoid a flash of the wrong theme. --}}
     <script>

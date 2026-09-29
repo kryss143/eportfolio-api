@@ -2,14 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Support\MongoProbe;
 use Tests\TestCase;
 
 /**
- * mongo:check failure path. phpunit.xml pins MONGODB_URI to a closed port
+ * mongo:check failure path. The DSN is pinned to a closed port (127.0.0.1:1)
  * with 100ms timeouts, so both probes fail fast and deterministically. The
  * command must report the verdict AND surface the exact driver error text —
  * surfacing that error is the command's reason to exist.
+ *
+ * The suite normally runs against the live testing cluster
+ * (MONGODB_DATABASE=eportfolio_testing); this test simulates an outage by
+ * overriding the mongodb connection's DSN to a closed port, then purging the
+ * cached connection and probe memos.
  */
 class MongoCheckCommandTest extends TestCase
 {
@@ -17,14 +21,7 @@ class MongoCheckCommandTest extends TestCase
     {
         parent::setUp();
 
-        MongoProbe::flush();
-    }
-
-    protected function tearDown(): void
-    {
-        MongoProbe::flush();
-
-        parent::tearDown();
+        $this->pinMongoDown();
     }
 
     public function test_reports_failure_with_driver_error_when_mongo_is_unreachable(): void

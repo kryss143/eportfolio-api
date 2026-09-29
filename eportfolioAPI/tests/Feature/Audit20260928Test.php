@@ -3,48 +3,30 @@
 namespace Tests\Feature;
 
 use App\Models\ActivityLog;
+use App\Models\Blog;
+use App\Models\Project;
 use App\Observers\ActivityObserver;
-use App\Services\MockDataService;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Schema;
+use MongoDB\Laravel\Eloquent\Model;
+use Tests\Concerns\CleansMongoCollections;
 use Tests\TestCase;
 
 /**
  * Regression tests for the 2026-09-28 app/ audit (bugs-reported/AUDIT-app-2026-09-28.md).
  *
- * phpunit.xml pins MONGODB_URI to a closed port, so Mongo is deterministically
- * unavailable here: API endpoints exercise their mock-fallback paths, and
- * ActivityLog lands on the in-memory SQLite connection.
+ * Runs against the live testing cluster (MONGODB_DATABASE=eportfolio_testing),
+ * with the same real save lifecycle the original suite approximated through a
+ * SQLite stand-in model. The stand-in is gone with SQLite itself.
  */
 class Audit20260928Test extends TestCase
 {
+    use CleansMongoCollections;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        // In-memory SQLite starts empty every test; the migration set (all
-        // pinned to the sqlite connection) creates users/cache/jobs/activity_log.
+        $this->cleanMongoCollections();
         $this->artisan('migrate', ['--force' => true]);
-
-        // Local stand-in for the Mongo content models: vanilla Eloquent stores
-        // 'json' casts as JSON-encoded strings in the raw attributes and decodes
-        // them for getOriginal() — exactly the storage shape that crashed the
-        // observer's array_diff_assoc() (audit F1).
-        Schema::dropIfExists('audit_test_projects');
-        Schema::create('audit_test_projects', function ($t) {
-            $t->id();
-            $t->string('title')->nullable();
-            $t->text('technologies')->nullable();
-            $t->text('metrics')->nullable();
-            $t->timestamps();
-        });
-    }
-
-    protected function tearDown(): void
-    {
-        Schema::dropIfExists('audit_test_projects');
-
-        parent::tearDown();
     }
 
     // ------------------------------------------------------------------
@@ -57,6 +39,8 @@ class Audit20260928Test extends TestCase
         $model = new class extends Model
         {
             protected $table = 'audit_test_projects';
+
+            protected $connection = 'mongodb';
 
             protected $guarded = [];
 
@@ -84,14 +68,21 @@ class Audit20260928Test extends TestCase
         $row = ActivityLog::query()
             ->where('subject_type', $class)
             ->where('event', 'updated')
-            ->latest('id')
+            ->latest('_id')
             ->first();
 
         $this->assertNotNull($row, 'observer should persist an activity row');
 
         // ActivityLog casts old_values/new_values to arrays.
         $changes = $row->new_values;
-        $this->assertSame(['title'], array_keys($changes), 'only actually-changed keys should be logged');
+        // Mongo timestamps carry millisecond precision, so updated_at can
+        // legitimately bump alongside the real change (sqlite's second
+        // precision never bumped it). Everything else must be exactly title.
+        $this->assertEqualsCanonicalizing(
+            ['title'],
+            array_values(array_diff(array_keys($changes), ['updated_at'])),
+            'only actually-changed keys should be logged (updated_at may bump)'
+        );
         $this->assertSame('new title', $changes['title']);
 
         $old = $row->old_values;
@@ -103,6 +94,8 @@ class Audit20260928Test extends TestCase
         $model = new class extends Model
         {
             protected $table = 'audit_test_projects';
+
+            protected $connection = 'mongodb';
 
             protected $guarded = [];
 
@@ -127,40 +120,112 @@ class Audit20260928Test extends TestCase
     }
 
     // ------------------------------------------------------------------
+    // F1b — the real content models must observe through the real lifecycle
+    // (Project has the json casts that crashed the observer pre-fix)
+    // ------------------------------------------------------------------
+
+    public function test_real_project_update_logs_activity(): void
+    {
+        $project = Project::create([
+            'title' => 'Audit Fixture',
+            'description' => 'created by Audit20260928Test',
+            'status' => 'built',
+            'featured' => false,
+        ]);
+
+        $this->assertSame(1, ActivityLog::where('event', 'created')->count());
+
+        $project->update(['title' => 'Audit Fixture Renamed']);
+
+        $row = ActivityLog::where('event', 'updated')->latest('_id')->first();
+        $this->assertNotNull($row);
+        // Mongo timestamps bump updated_at on every save (ms precision).
+        $this->assertEqualsCanonicalizing(
+            ['title'],
+            array_values(array_diff(array_keys($row->new_values), ['updated_at'])),
+        );
+        $this->assertSame('Audit Fixture Renamed', $row->new_values['title']);
+    }
+
+    // ------------------------------------------------------------------
     // F2 — drafts (date IS NULL) are never public on the API
     // ------------------------------------------------------------------
 
-    public function test_blog_index_mock_path_excludes_drafts_by_default(): void
+    public function test_blog_index_excludes_drafts_by_default(): void
     {
-        $mock = MockDataService::get('blogs');
-        $this->assertNotEmpty($mock, 'mock blogs must exist for the fallback path');
-        $this->assertTrue(
-            collect($mock)->every(fn ($b) => ! empty($b['date'])),
-            'mock fixture currently has no drafts; this test pins the default filter'
-        );
+        // Seed one published and one draft post through the real model.
+        Blog::create([
+            'title' => 'Published post',
+            'slug' => 'published-post',
+            'excerpt' => 'visible',
+            'date' => '2024-03-15',
+            'readTime' => '5 min read',
+            'content' => '<p>visible</p>',
+        ]);
+        Blog::create([
+            'title' => 'Draft post',
+            'slug' => 'draft-post',
+            'excerpt' => 'hidden',
+            'date' => null,
+            'readTime' => '5 min read',
+            'content' => '<p>hidden</p>',
+        ]);
 
         $response = $this->getJson('/api/v1/blogs');
 
         $response->assertOk();
         $slugs = collect($response->json('data'))->pluck('slug');
-        $this->assertContains($mock[0]['slug'], $slugs);
+        $this->assertContains('published-post', $slugs);
+        $this->assertNotContains('draft-post', $slugs, 'drafts (date IS NULL) must never be public by default');
     }
 
-    public function test_blog_show_mock_path_serves_mock_blog_by_slug(): void
+    public function test_blog_show_serves_live_blog_by_slug(): void
     {
-        $slug = MockDataService::get('blogs')[0]['slug'];
+        Blog::create([
+            'title' => 'Published post',
+            'slug' => 'published-post',
+            'excerpt' => 'visible',
+            'date' => '2024-03-15',
+            'readTime' => '5 min read',
+            'content' => '<p>visible</p>',
+        ]);
 
-        $response = $this->getJson("/api/v1/blogs/{$slug}");
+        $response = $this->getJson('/api/v1/blogs/published-post');
 
-        $response->assertOk()->assertJsonPath('data.slug', $slug);
+        $response->assertOk()->assertJsonPath('data.slug', 'published-post');
     }
 
-    public function test_blog_index_mock_path_honors_explicit_draft_filter(): void
+    public function test_blog_index_honors_explicit_draft_filter(): void
     {
+        Blog::create([
+            'title' => 'Published post',
+            'slug' => 'published-post',
+            'excerpt' => 'visible',
+            'date' => '2024-03-15',
+            'readTime' => '5 min read',
+            'content' => '<p>visible</p>',
+        ]);
+
         $response = $this->getJson('/api/v1/blogs?status=draft');
 
         $response->assertOk();
-        // No mock drafts exist; the explicit draft filter must yield an empty set.
         $this->assertCount(0, $response->json('data'));
+    }
+
+    // ------------------------------------------------------------------
+    // F3 — the API's mock fallback must still engage on a real outage
+    // ------------------------------------------------------------------
+
+    public function test_blog_api_falls_back_to_mock_when_mongo_is_down(): void
+    {
+        $this->pinMongoDown();
+
+        $response = $this->getJson('/api/v1/blogs');
+
+        $response->assertOk();
+        $this->assertNotEmpty(
+            $response->json('data'),
+            'mock fallback must engage when the DSN points at a closed port'
+        );
     }
 }

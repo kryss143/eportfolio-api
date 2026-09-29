@@ -9,16 +9,35 @@ use App\Models\Metric;
 use App\Models\Project;
 use App\Models\Skill;
 use App\Models\TechSkill;
+use App\Services\MockDataService;
 use App\Support\MongoProbe;
 use Illuminate\Database\Seeder;
 
+/**
+ * Seeds MongoDB with the portfolio's real content.
+ *
+ * Single source of truth: database/mock-data.json — a faithful port of
+ * eportfolio/portfolio/src/contents/* (experience, metrics, projects, blogs,
+ * skills, tech-skill chips). The old inline PHP arrays drifted from the
+ * portfolio copy (abridged blog bodies, an outdated project blurb, a
+ * nonexistent copilot devicon path), so the DB, the degraded-mode fallback
+ * (FallbackData → MockDataService) and the portfolio no longer agreed.
+ * Seeding from the same file the fallback serves makes drift structurally
+ * impossible: edit the portfolio contents first, mirror it here once, and
+ * both the healthy and degraded API paths serve identical content.
+ *
+ * The mock rows' "id" / "created_at" / "updated_at" keys are fallback-mode
+ * bookkeeping (stable ids for the detail endpoints, deterministic timestamps)
+ * and are intentionally NOT seeded: MongoDB documents get real ObjectId keys,
+ * and the API Resources expose no timestamps.
+ */
 class ContentSeeder extends Seeder
 {
     public function run(): void
     {
         // Check THIS connection explicitly: a generic Throwable catch alone
-        // would hide a misconfigured app (e.g. an sqlite default silently
-        // seeding the wrong store while Mongo is actually fine).
+        // would hide a misconfigured app (e.g. an unreachable MongoDB URI
+        // silently seeding nothing while the app serves mock data).
         if (! MongoProbe::available()) {
             $this->command?->warn('ContentSeeder skipped: MongoDB not available. API will use mock-data.json fallback.');
 
@@ -36,261 +55,118 @@ class ContentSeeder extends Seeder
     protected function seedExperience(): void
     {
         Experience::truncate();
+
+        $row = MockDataService::findById('experiences', 'primary');
+
+        if ($row === null) {
+            $this->command?->error('ContentSeeder: mock-data.json is missing the "primary" experience row.');
+
+            return;
+        }
+
         Experience::create([
-            'position' => 'Full-Stack Developer',
-            'yearsOfExperience' => 2,
-            'soloProjects' => 2,
-            'collabProjects' => 2,
+            'position' => $row['position'],
+            'yearsOfExperience' => (int) $row['yearsOfExperience'],
+            'soloProjects' => (int) $row['soloProjects'],
+            'collabProjects' => (int) $row['collabProjects'],
         ]);
     }
 
     protected function seedMetrics(): void
     {
         Metric::truncate();
-        Metric::create([
-            'label' => 'Total Projects',
-            'value' => 5,
-            'metricDescription' => 'Product-style builds spanning frontend, backend, database, and deployment workflows.',
-        ]);
-        Metric::create([
-            'label' => 'Ongoing',
-            'value' => 1,
-            'metricDescription' => 'Active project work that keeps the portfolio iterative and current.',
-        ]);
-        Metric::create([
-            'label' => 'Live Demo/s Available',
-            'value' => 4,
-            'metricDescription' => 'Public demos recruiters can review without navigating repositories.',
-        ]);
-        Metric::create([
-            'label' => 'Total Commits',
-            'value' => 289,
-            'suffix' => '+',
-            'metricDescription' => 'Visible delivery cadence across shipped and in-progress work.',
-        ]);
+
+        foreach (MockDataService::get('metrics') as $row) {
+            Metric::create([
+                'label' => $row['label'],
+                'value' => (int) $row['value'],
+                'suffix' => $row['suffix'] ?? null,
+                'metricDescription' => $row['metricDescription'],
+            ]);
+        }
     }
 
     protected function seedProjects(): void
     {
         Project::truncate();
-        $projects = [
-            [
-                'title' => 'Property Management System',
-                'description' => 'Multi-tenant property platform for landlords, featuring role-gated dashboards, live tenant records, and end-to-end lease workflow management, built full-stack.',
-                'technologies' => ['React', 'Tailwind CSS', 'Express.js', 'Supabase', 'RestAPI'],
-                'status' => 'built',
-                'githubLink' => 'https://github.com/kryss143/property-management',
-                'demoLink' => 'https://property-management-client.vercel.app',
-                'image' => '/projects/PMS.webp',
-                'outcome' => 'Shipped with Supabase auth, role-gated access for landlord vs. tenant views, real-time record sync, and complete listing lifecycle management, deployed and live on Vercel.',
-                'metrics' => ['2 role scopes (landlord / tenant)', 'Real-time sync via Supabase Realtime', 'Full CRUD across 3 entity types', 'Deployed: Vercel'],
-                'featured' => true,
-            ],
-            [
-                'title' => 'GrabCat',
-                'description' => 'Ride-booking platform for cat owners with real dispatch mechanics: route requests, driver acceptance, and a full booking state machine modelled on Grab\'s service flow.',
-                'technologies' => ['Angular', 'DaisyUI', 'Express.js', '.NET', 'MongoDB', 'Prisma'],
-                'status' => 'in-progress',
-                'githubLink' => 'https://github.com/kryss143/grabcat',
-                'demoLink' => null,
-                'image' => '/projects/GrabCat.webp',
-                'outcome' => 'Angular UI with a full booking state machine covering request, accept, and dispatch flows backed by a custom REST API.',
-                'metrics' => ['Cat booking web application', 'Angular standalone components', 'Custom .NET REST API', 'Driver + rider role separation'],
-                'featured' => false,
-            ],
-            [
-                'title' => 'Recipe Finder App',
-                'description' => 'Vue SPA integrating the MealDB REST API with category and ingredient filtering and instant result-to-detail navigation.',
-                'technologies' => ['Vue', 'DaisyUI', 'Back4App', 'RestAPI'],
-                'status' => 'built',
-                'githubLink' => 'https://github.com/kryss143/recipe-finder-app',
-                'demoLink' => 'https://kryssrecipefinder.vercel.app/',
-                'image' => '/projects/RecipeFinderApp.webp',
-                'outcome' => 'Vue SPA with MealDB integration featuring category and keyword filtering, lazy-loaded detail views, and a mobile-first layout.',
-                'metrics' => ['MealDB REST API', '2 filter axes (category + ingredient)', 'Mobile-first layout', 'Live on Vercel'],
-                'featured' => false,
-            ],
-            [
-                'title' => 'Mini HCM App',
-                'description' => 'HR management platform for small teams with onboarding records, role-gated login, and leave and status tracking.',
-                'technologies' => ['React.js', 'TailwindCSS', 'Express.js', 'Firebase', 'Firestore', 'RestAPI'],
-                'status' => 'built',
-                'githubLink' => 'https://github.com/kryss143/mini-hcm-app/',
-                'demoLink' => 'https://mini-hcm-app.web.app/',
-                'image' => '/projects/MiniHCM.webp',
-                'outcome' => 'Shipped Firebase Auth with admin/employee role gating, Firestore-backed records, and a React dashboard.',
-                'metrics' => ['2 role scopes (admin / employee)', 'Firestore real-time records', 'Leave + status tracking', 'Deployed: Firebase Hosting'],
-                'featured' => false,
-            ],
-            [
-                'title' => 'JobLedger Job Tracker App',
-                'description' => 'Next.js job search dashboard: track applications across status stages and visualise your full pipeline in one view.',
-                'technologies' => ['Next.js', 'Next.js Server Actions', 'Supabase', 'RestAPI'],
-                'status' => 'built',
-                'githubLink' => 'https://github.com/kryss143/application-tracker',
-                'demoLink' => 'https://jobledger-app-tracker.vercel.app/',
-                'image' => '/projects/JobLedger.webp',
-                'outcome' => 'Full-stack with Next.js Server Actions and Supabase, covering auth, application management, status tracking, and pipeline view.',
-                'metrics' => ['Next.js Server Actions (no external API layer)', 'Supabase auth + DB', 'Multi-stage status pipeline', 'Live on Vercel'],
-                'featured' => false,
-            ],
-        ];
 
-        foreach ($projects as $project) {
-            Project::create($project);
+        foreach (MockDataService::get('projects') as $row) {
+            Project::create([
+                'title' => $row['title'],
+                'description' => $row['description'],
+                'technologies' => $row['technologies'],
+                // Validated against the ProjectStatus enum when the model
+                // casts it — a typo in mock-data.json must fail loudly here,
+                // not surface as a broken status badge in production.
+                'status' => $row['status'],
+                'githubLink' => $row['githubLink'],
+                'demoLink' => $row['demoLink'] ?? null,
+                'image' => $row['image'],
+                'outcome' => $row['outcome'],
+                'metrics' => $row['metrics'],
+                'featured' => (bool) ($row['featured'] ?? false),
+            ]);
         }
     }
 
     protected function seedBlogs(): void
     {
         Blog::truncate();
-        $blogs = [
-            [
-                'title' => 'Exploring Next.js 14 App Router and Performance Improvements',
-                'excerpt' => 'A breakdown of App Router architecture and rendering optimizations in Next.js 14.',
-                'date' => '2024-03-15',
-                'readTime' => '5 min read',
-                'slug' => 'nextjs-app-router',
-                'content' => '<p>When I started building JobLedger, I had a choice to make early: stick with the Pages Router I already knew, or commit to the App Router that Next.js 14 was pushing as the default.</p><p>The biggest shift was unlearning client-first thinking. In the Pages Router, everything was a client component unless you explicitly used getServerSideProps or getStaticProps.</p>',
-            ],
-            [
-                'title' => 'Scaling React Applications with TypeScript Architecture',
-                'excerpt' => 'How TypeScript improves maintainability and structure in large React codebases.',
-                'date' => '2024-03-10',
-                'readTime' => '8 min read',
-                'slug' => 'scaling-react-typescript',
-                'content' => '<p>At Alliance Software, I worked on an enterprise web platform used across multiple departments daily. The codebase was large enough that understanding a component\'s expected props required good documentation.</p><p>The architectural pattern that made the biggest difference was co-locating types with the features that own them.</p>',
-            ],
-            [
-                'title' => 'Designing Scalable Responsive UI Systems with Tailwind CSS',
-                'excerpt' => 'Approaches to building consistent, reusable, and responsive design systems.',
-                'date' => '2024-03-05',
-                'readTime' => '6 min read',
-                'slug' => 'scalable-ui-tailwind',
-                'content' => '<p>When I built 10+ reusable React component modules at Alliance Software for an enterprise platform, consistency was the constraint I underestimated.</p><p>The pattern I settled on was building layout-agnostic components.</p>',
-            ],
-            [
-                'title' => 'Designing State Logic with React Hooks in Production Apps',
-                'excerpt' => 'Practical patterns for managing complex state using React Hooks.',
-                'date' => '2024-03-01',
-                'readTime' => '7 min read',
-                'slug' => 'react-hooks-state-logic',
-                'content' => '<p>State management decisions age poorly when they\'re made too early. On the Mini HCM App, I started with local component state because the scope felt small.</p><p>The custom hook pattern changed how I approached feature development.</p>',
-            ],
-            [
-                'title' => 'Production Deployment Workflows for Next.js on Vercel',
-                'excerpt' => 'Strategies for deploying and maintaining Next.js apps in production environments.',
-                'date' => '2024-02-25',
-                'readTime' => '4 min read',
-                'slug' => 'nextjs-vercel-deployment',
-                'content' => '<p>Achieving zero rollbacks across 20+ production releases at Alliance Software wasn\'t an accident: it came from owning the full CI/CD cycle deliberately.</p><p>The most valuable operational habit I built was treating deployment configuration as code.</p>',
-            ],
-            [
-                'title' => 'Designing Scalable REST APIs with Node.js and Express Architecture',
-                'excerpt' => 'Core principles behind building maintainable and scalable backend APIs.',
-                'date' => '2024-02-20',
-                'readTime' => '10 min read',
-                'slug' => 'rest-api-node-express',
-                'content' => '<p>When I architected the KeyNest Property Management System, the API wasn\'t an afterthought: it was the foundation I designed before writing a single React component.</p><p>The middleware pattern was the most important architectural decision I made on the backend.</p>',
-            ],
-        ];
 
-        foreach ($blogs as $blog) {
-            Blog::create($blog);
+        foreach (MockDataService::get('blogs') as $row) {
+            Blog::create([
+                'title' => $row['title'],
+                'excerpt' => $row['excerpt'],
+                'date' => $row['date'],
+                'readTime' => $row['readTime'],
+                'slug' => $row['slug'],
+                'content' => $row['content'],
+            ]);
         }
     }
 
     protected function seedSkills(): void
     {
         Skill::truncate();
-        Skill::create([
-            'proficient' => [
-                'JavaScript', 'TypeScript', 'React', 'Vue', 'Node.js',
-                'Express.js', 'HTML5', 'CSS3', 'TailwindCSS', 'PostgreSQL',
-                'SQL', 'REST API Design', 'Git', 'GitHub', 'Responsive Design',
-                'Firebase', 'Firestore',
-            ],
-            'familiar' => [
-                'Next.js', 'Angular', 'PHP', 'Laravel', 'Redux',
-                'MongoDB', 'Supabase', 'MySQL', 'Pinia', 'Context API',
-                'Python', 'C#', '.NET', '.NET Core', 'Nuxt.js',
-                'Jest', 'Vitest', 'Docker', 'Svelte',
-            ],
-            'authentication' => [
-                'Firebase Authentication', 'JWT', 'Session Management',
-                'Role-Based Access Control (RBAC)', 'CORS',
-                'Input Validation', 'Middleware Patterns',
-            ],
-            'architecture' => [
-                'Lazy Loading', 'Code Splitting', 'Async/Await',
-                'State Management', 'MVC Pattern', 'Clean Architecture',
-                'API Integration', 'Error Handling',
-            ],
-            'toolsPlatforms' => [
-                'GitHub Actions', 'Vercel', 'Firebase Hosting', 'Render',
-                'Postman', 'Netlify', 'Microsoft Azure DevOps',
-                'Mendix (Certified Intermediate Developer)',
-            ],
-            'practices' => [
-                'Agile/Scrum', 'CI/CD', 'Mobile-First Responsive Design',
-                'Version Control', 'Manual QA', 'Cross-Browser Testing',
-                'Code Review', 'Code Refactoring',
-            ],
-            'ai' => ['GitHub Copilot', 'Claude', 'Cursor', 'Bolt'],
-        ]);
+
+        $rows = MockDataService::get('skills');
+
+        if (count($rows) !== 1) {
+            $this->command?->error('ContentSeeder: mock-data.json must contain exactly one skills row (the singleton).');
+
+            return;
+        }
+
+        $row = $rows[0];
+
+        // Audit post-mongo Bug 5: seed the singleton via its fixed `key` so
+        // the document is the exact one the admin controller targets. The
+        // `key` is attached here rather than stored in mock-data.json, which
+        // the degraded mode serves verbatim and clients never need.
+        Skill::create(array_merge(['key' => Skill::SINGLETON_KEY], [
+            'proficient' => $row['proficient'],
+            'familiar' => $row['familiar'],
+            'authentication' => $row['authentication'],
+            'architecture' => $row['architecture'],
+            'toolsPlatforms' => $row['toolsPlatforms'],
+            'practices' => $row['practices'],
+            'ai' => $row['ai'],
+        ]));
     }
 
     protected function seedTechSkills(): void
     {
         TechSkill::truncate();
-        $skills = [
-            // Frontend
-            ['category' => TechCategory::Frontend, 'logo' => './devicons/react-original.svg', 'label' => 'React'],
-            ['category' => TechCategory::Frontend, 'logo' => './devicons/angular-original.svg', 'label' => 'Angular'],
-            ['category' => TechCategory::Frontend, 'logo' => './devicons/vuejs-original.svg', 'label' => 'Vue'],
-            ['category' => TechCategory::Frontend, 'logo' => './devicons/svelte-original.svg', 'label' => 'Svelte'],
-            ['category' => TechCategory::Frontend, 'logo' => './devicons/tailwindcss-original.svg', 'label' => 'TailwindCSS'],
-            // Backend
-            ['category' => TechCategory::Backend, 'logo' => './devicons/express-original.svg', 'label' => 'Express.js'],
-            ['category' => TechCategory::Backend, 'logo' => './devicons/php-original.svg', 'label' => 'PHP'],
-            ['category' => TechCategory::Backend, 'logo' => './devicons/nodejs-original.svg', 'label' => 'Node.js'],
-            ['category' => TechCategory::Backend, 'logo' => './devicons/python-original.svg', 'label' => 'Python'],
-            ['category' => TechCategory::Backend, 'logo' => './devicons/csharp-original.svg', 'label' => 'C#'],
-            ['category' => TechCategory::Backend, 'logo' => './devicons/dot-net-original.svg', 'label' => '.NET'],
-            ['category' => TechCategory::Backend, 'logo' => './devicons/dotnetcore-original.svg', 'label' => '.NET Core'],
-            // Fullstack
-            ['category' => TechCategory::Fullstack, 'logo' => './devicons/nextjs-original.svg', 'label' => 'Next.js'],
-            ['category' => TechCategory::Fullstack, 'logo' => './devicons/nuxtjs-original.svg', 'label' => 'Nuxt.js'],
-            ['category' => TechCategory::Fullstack, 'logo' => './devicons/laravel-original.svg', 'label' => 'Laravel'],
-            // CI/CD
-            ['category' => TechCategory::CICD, 'logo' => './devicons/azuredevops-original.svg', 'label' => 'Microsoft Azure DevOps'],
-            ['category' => TechCategory::CICD, 'logo' => './devicons/githubactions-original.svg', 'label' => 'GitHub Actions'],
-            ['category' => TechCategory::CICD, 'logo' => './devicons/docker-original.svg', 'label' => 'Docker'],
-            // AI
-            ['category' => TechCategory::AI, 'logo' => './devicons/copilot-original.svg', 'label' => 'GitHub Copilot'],
-            ['category' => TechCategory::AI, 'logo' => './devicons/claude-original.svg', 'label' => 'Claude'],
-            ['category' => TechCategory::AI, 'logo' => './devicons/cursor-original.svg', 'label' => 'Cursor'],
-            ['category' => TechCategory::AI, 'logo' => './devicons/bolt-original.svg', 'label' => 'Bolt'],
-            // Database
-            ['category' => TechCategory::Database, 'logo' => './devicons/sqldeveloper-original.svg', 'label' => 'SQL'],
-            ['category' => TechCategory::Database, 'logo' => './devicons/mysql-original.svg', 'label' => 'MySQL'],
-            ['category' => TechCategory::Database, 'logo' => './devicons/postgresql-original.svg', 'label' => 'PostgreSQL'],
-            ['category' => TechCategory::Database, 'logo' => './devicons/mongodb-original.svg', 'label' => 'MongoDB'],
-            ['category' => TechCategory::Database, 'logo' => './devicons/firebase-original.svg', 'label' => 'Firebase'],
-            // Deploy
-            ['category' => TechCategory::Deploy, 'logo' => './devicons/vercel-original.svg', 'label' => 'Vercel'],
-            ['category' => TechCategory::Deploy, 'logo' => './devicons/netlify-original.svg', 'label' => 'Netlify'],
-            ['category' => TechCategory::Deploy, 'logo' => './devicons/github-original.svg', 'label' => 'GitHub'],
-            ['category' => TechCategory::Deploy, 'logo' => './devicons/git-original.svg', 'label' => 'Git'],
-            // Fundamental
-            ['category' => TechCategory::Fundamental, 'logo' => './devicons/html5-original.svg', 'label' => 'HTML5'],
-            ['category' => TechCategory::Fundamental, 'logo' => './devicons/css3-original.svg', 'label' => 'CSS3'],
-            ['category' => TechCategory::Fundamental, 'logo' => './devicons/javascript-original.svg', 'label' => 'JavaScript'],
-            ['category' => TechCategory::Fundamental, 'logo' => './devicons/typescript-original.svg', 'label' => 'TypeScript'],
-        ];
 
-        foreach ($skills as $skill) {
-            TechSkill::create($skill);
+        foreach (MockDataService::get('tech_skills') as $row) {
+            TechSkill::create([
+                // FromString keeps the file's plain category strings honest —
+                // an unknown category throws instead of silently writing a
+                // value the TechSkillController's category filter can't match.
+                'category' => TechCategory::from($row['category']),
+                'logo' => $row['logo'],
+                'label' => $row['label'],
+            ]);
         }
     }
 }

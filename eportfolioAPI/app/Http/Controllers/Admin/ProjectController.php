@@ -20,7 +20,10 @@ class ProjectController extends Controller
 
             if ($request->filled('search')) {
                 $search = $request->input('search');
-                $items = array_values(array_filter($items, fn ($p) => str_contains($p['title'] ?? '', $search) || str_contains($p['description'] ?? '', $search)));
+                // Audit post-mongo Bug 6: case-insensitive to match the
+                // live-DB path's (case-insensitive) `like` operator.
+                $needle = mb_strtolower($search);
+                $items = array_values(array_filter($items, fn ($p) => str_contains(mb_strtolower($p['title'] ?? ''), $needle) || str_contains(mb_strtolower($p['description'] ?? ''), $needle)));
             }
             if ($request->filled('status')) {
                 $items = array_values(array_filter($items, fn ($p) => ($p['status'] ?? '') === $request->input('status')));
@@ -178,9 +181,10 @@ class ProjectController extends Controller
             return $redirect;
         }
 
+        // Audit post-mongo Bug 7: ids must be well-formed ObjectIds.
         $request->validate([
             'ids' => ['required', 'array'],
-            'ids.*' => ['string'],
+            'ids.*' => ['string', 'regex:/^[a-f0-9]{24}$/i'],
         ]);
 
         $projects = Project::whereIn('_id', $request->input('ids'))->get();

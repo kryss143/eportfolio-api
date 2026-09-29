@@ -5,23 +5,21 @@ namespace Tests\Concerns;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Empties the MongoDB collections the app writes to, replacing
- * RefreshDatabase (which only migrates SQL stores and would leave Mongo
- * state — users, content, activity_log — leaking between tests). Use in
- * setUp() AND tearDown() so a crashing test never pollutes later ones.
+ * Drops the MongoDB collections the app writes to, replacing the old
+ * RefreshDatabase flow (SQL transactions on the sqlite fallback no longer
+ * exist — the whole app, tests included, runs on MongoDB). Use in setUp()
+ * AND tearDown() so a crashing test never pollutes later ones.
  *
- * Collections are dropped only if empty-of-need: deleting documents keeps
- * the indexes created by the schema migrations (RefreshDatabase never
- * touches Mongo, so those indexes must survive the whole suite run).
+ * Collections are dropped (not just emptied) so index state is rebuilt by
+ * the schema migrations each test's migrate run creates from — no stale
+ * index can leak between tests.
+ *
+ * Every collection named here must exist in the migration set.
  */
 trait CleansMongoCollections
 {
     protected function cleanMongoCollections(): void
     {
-        if (! extension_loaded('mongodb')) {
-            return;
-        }
-
         try {
             $db = DB::connection('mongodb')->getDatabase();
 
@@ -41,13 +39,17 @@ trait CleansMongoCollections
                 'job_batches',
                 'failed_jobs',
                 'rate_limits',
+                // Stand-in collection used by Audit20260928Test's anonymous model.
+                'audit_test_projects',
             ] as $collection) {
-                $db->selectCollection($collection)->deleteMany([]);
+                $db->selectCollection($collection)->drop();
             }
-        } catch (\Throwable) {
-            // Mongo unreachable (pinned to a closed port in phpunit.xml):
-            // tests then exercise the mock-data path and write nothing, so
-            // there is nothing to clean.
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                'MongoDB is required for the test suite (see MONGODB_URI / MONGODB_DATABASE=eportfolio_testing) but is unreachable: '.$e->getMessage(),
+                0,
+                $e
+            );
         }
     }
 }

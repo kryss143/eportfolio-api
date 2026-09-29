@@ -23,27 +23,24 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <!-- Schema now lives on MongoDB (see database/migrations); sqlite
-             remains only as the tests' throwaway auth store. Keep a :memory:
-             sqlite + a db name for the connection definitions the framework
-             boots, so tests never touch the dev database.sqlite file. -->
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
-        <env name="MONGODB_DATABASE" value="eportfolio_testing"/>
+        <!-- The whole app runs on MongoDB (default connection, sessions,
+             cache, queue). Tests share the live cluster but isolate into the
+             dedicated eportfolio_testing database; TestCase refuses to run
+             against any other database because the suite DROPS collections.
+             Keep a db name for the config the framework boots. -->
+        <env name="DB_CONNECTION" value="mongodb"/>
+        <env name="MONGODB_DATABASE" value="eportfolio_testing" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <!-- v2-audit fix: pin Mongo to a closed port so the suite never talks
-             to real Atlas (was: tests lasted 0.3s or 3.2s depending on the
-             network, and failed offline). Probes fail fast (~1s, deterministic)
-             and every endpoint exercises its mock-fallback path. -->
-        <env name="MONGODB_URI" value="mongodb://127.0.0.1:1"/>
-        <env name="MONGODB_CONNECT_TIMEOUT_MS" value="100"/>
-        <env name="MONGODB_SERVER_SELECTION_TIMEOUT_MS" value="100"/>
-        <env name="MONGODB_SOCKET_TIMEOUT_MS" value="100"/>
+        <!-- Timeouts must tolerate real Atlas SRV round trips (DNS lookup,
+             TLS handshake, auth). Tests that simulate a Mongo outage pin the
+             DSN to a closed port AND tighten these per test (TestCase::pinMongoDown). -->
+        <env name="MONGODB_CONNECT_TIMEOUT_MS" value="3000"/>
+        <env name="MONGODB_SERVER_SELECTION_TIMEOUT_MS" value="3000"/>
+        <env name="MONGODB_SOCKET_TIMEOUT_MS" value="3000"/>
     </php>
 </phpunit>

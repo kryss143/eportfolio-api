@@ -39,15 +39,13 @@ class SkillController extends Controller
             return view('admin.skills.edit', compact('skills'));
         }
 
-        $skills = Skill::firstOrCreate([], [
-            'proficient' => [],
-            'familiar' => [],
-            'authentication' => [],
-            'architecture' => [],
-            'toolsPlatforms' => [],
-            'practices' => [],
-            'ai' => [],
-        ]);
+        // Audit post-mongo Bug 5 (2026-09-28): the singleton is keyed by a
+        // fixed unique `key` field so create-once semantics are race-free.
+        // The previous firstOrCreate([]) matched on nothing — two concurrent
+        // requests on a fresh install created duplicate documents, and
+        // Skill::first() afterwards arbitrarily picked one (an admin's edit
+        // silently "didn't stick").
+        $skills = Skill::singleton();
 
         return view('admin.skills.edit', compact('skills'));
     }
@@ -78,7 +76,8 @@ class SkillController extends Controller
             'ai.*' => ['string'],
         ]);
 
-        $skills = Skill::firstOrCreate([]);
+        // Bug 5: always target the singleton document via its fixed key.
+        $skills = Skill::singleton();
         $skills->update($validated);
 
         return redirect()->route('admin.skills.index')

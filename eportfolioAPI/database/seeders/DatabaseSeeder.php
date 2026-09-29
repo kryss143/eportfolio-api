@@ -14,6 +14,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminUserSeeder::class,
             ContentSeeder::class,
+            // Depends on the admin user and content above existing, so it
+            // runs last and references real Project/Blog/User documents.
+            ActivityLogSeeder::class,
         ]);
     }
 }

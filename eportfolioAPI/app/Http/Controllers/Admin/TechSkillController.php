@@ -116,9 +116,10 @@ class TechSkillController extends Controller
             return $redirect;
         }
 
+        // Audit post-mongo Bug 7: ids must be well-formed ObjectIds.
         $request->validate([
             'ids' => ['required', 'array'],
-            'ids.*' => ['string'],
+            'ids.*' => ['string', 'regex:/^[a-f0-9]{24}$/i'],
         ]);
 
         $count = TechSkill::whereIn('_id', $request->input('ids'))->delete();
