@@ -114,7 +114,9 @@ trait FallbackData
 
             // Mongo unreachable: same condition as the list fallback —
             // serve the mock item so detail links from a mock list work.
-            return $this->findMockItem($mockCollection, $key, $value);
+            // Use the stable 'id' key here too, so mock detail lookups
+            // (p1/b1) are consistent with the list path below.
+            return $this->findMockItem($mockCollection, 'id', $value);
         }
     }
 
@@ -195,6 +197,11 @@ trait FallbackData
         if ($key === 'slug') {
             $item = MockDataService::findBySlug($mockCollection, $value);
         } else {
+            // Mock rows use a stable 'id' (e.g. 'p1', 'b1') that never
+            // collides with a MongoDB ObjectId, and the list path serves the
+            // same row for a ?id=<id> query. Match that to avoid phantom
+            // detail pages and to keep the DB path's primary key as the
+            // single source of truth for lookup.
             $item = MockDataService::findById($mockCollection, $value);
         }
 

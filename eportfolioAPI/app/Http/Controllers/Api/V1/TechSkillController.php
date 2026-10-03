@@ -9,6 +9,7 @@ use App\Models\TechSkill;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Stringable;
 use Illuminate\Validation\Rule;
 
 class TechSkillController extends Controller
@@ -47,7 +48,8 @@ class TechSkillController extends Controller
         )->validate();
 
         // The category arrives as a route parameter, but the mock fallback
-        // filters read request input — merge it so the fallback is filtered.
+        // filters read request input — merge it so the fallback is filtered,
+        // exactly like the index() path does below.
         request()->merge(['category' => $validated['category']]);
 
         $skills = $this->withFallback(
@@ -55,9 +57,11 @@ class TechSkillController extends Controller
             'tech_skills'
         );
 
-        // Filter real DB results defensively (enum vs raw values).
+        // Filter real DB results defensively (enum vs raw values) — the
+        // mock rows carry a plain 'category' string, the DB rows a cast
+        // TechCategory enum, so normalize both sides to the raw string.
         $filtered = collect($skills)
-            ->filter(fn ($s) => ($s->category?->value ?? $s->category ?? null) === $validated['category'])
+            ->filter(fn ($s) => (Stringable::class === get_class($s->category) ? (string) $s->category->value : (string) ($s->category ?? '')) === $validated['category'])
             ->values();
 
         return response()->json([

@@ -24,6 +24,20 @@ class MetricController extends Controller
             'metrics'
         );
 
+        // Bug #13: the metrics collection can legitimately be empty (no
+        // metrics seeded yet). withFallback() only falls back on a connection
+        // error, so an empty *result* would otherwise come back as an empty
+        // paginator envelope. Mirror the list endpoints: when the collection
+        // has no documents at all, serve the mock metrics instead of an
+        // empty healthy-mode response.
+        if ($metrics instanceof \Illuminate\Pagination\LengthAwarePaginator && $metrics->total() === 0 && ! $this->collectionHasDocuments('metrics')) {
+            $mockMetrics = $this->applyMockFilters('metrics');
+
+            if (! empty($mockMetrics)) {
+                $metrics = $this->mockPaginate($mockMetrics, 'metrics');
+            }
+        }
+
         return MetricResource::collection($metrics);
     }
 }
