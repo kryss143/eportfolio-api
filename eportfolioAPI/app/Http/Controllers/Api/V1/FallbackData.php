@@ -210,7 +210,6 @@ trait FallbackData
 
     /**
      * Paginate mock items wrapped as model instances.
-     * Bug #17: keeps the query string on generated pagination links.
      *
      * v2-audit fix: honor the request's validated per_page (bounded to the
      * same 1..100 range the endpoints validate) instead of hardcoding 15 —
@@ -222,6 +221,7 @@ trait FallbackData
         $perPage = max(1, min(100, $perPage));
         $page = max(1, (int) request()->input('page', 1));
         $offset = ($page - 1) * $perPage;
+
         $sliced = array_slice($items, $offset, $perPage);
         $models = array_map(fn ($item) => $this->toModel($item, $collection), $sliced);
 
