@@ -8,7 +8,7 @@ FROM composer:2 AS build-composer
 
 WORKDIR /app
 
-RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer \\
+RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer \
     composer install --no-interaction --no-progress --optimize-autoloader --no-dev
 
 # System libs required by the MongoDB PHP extension, intl, and the build tools.
@@ -89,6 +89,7 @@ ENV APP_ENV=production \
 COPY --from=build-composer /app/vendor /app/vendor
 # 2. Copy the actual compiled source code from the build stage
 COPY --from=build /app /app
+
 # Copy compiled PHP extensions directly from the base build layer
 COPY --from=base /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=base /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
@@ -104,4 +105,3 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 EXPOSE 8080
 
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
-
