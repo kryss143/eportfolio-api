@@ -36,7 +36,7 @@ RUN apk add --no-cache \
 # --- Composer stage ---
 FROM composer:latest AS composer
 
-WORKDIR /srv/app
+WORKDIR /eportfolioAPI/app
 
 # Install the MongoDB PHP extension so `composer install` can check the
 # lockfile extension requirements (ext-mongodb ^2.3 for mongodb/mongodb 2.3.0).
