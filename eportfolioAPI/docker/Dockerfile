@@ -40,6 +40,15 @@ FROM composer:latest AS composer
 
 WORKDIR /srv/app
 
+# Install the MongoDB PHP extension so `composer install` can check the
+# lockfile extension requirements (ext-mongodb ^2.3 for mongodb/mongodb 2.3.0).
+# The `base` stage has it compiled for Alpine, but the `composer` image is
+# Debian-based and doesn't, so we compile it here as well.
+RUN apk add --no-cache $PHPIZE_DEPS icu-dev libxml2-dev oniguruma-dev zlib-dev \
+    && pecl install mongodb redis \
+    && docker-php-ext-enable mongodb redis \
+    && apk del --no-cache $PHPIZE_DEPS
+
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction --optimize-autoloader
 
@@ -95,8 +104,8 @@ ENV APP_ENV=production \
 
 COPY --from=composer /srv/app/vendor /srv/app/vendor
 
-# Copy compiled PECL binaries straight into the extension directory.
-# No pecl, no xdebug, and no Alpine dev libs are needed in this stage.
+# Copy the compiled MongoDB + Redis extensions (and PHP config) from the
+# `base` stage into the production runtime image.
 COPY --from=base /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=base /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
