@@ -36,7 +36,7 @@ RUN apk add --no-cache \
 # --- Composer stage ---
 FROM composer:latest AS composer
 
-WORKDIR /eportfolioAPI/app
+WORKDIR /eportfolioAPI/
 
 # Install the MongoDB PHP extension so `composer install` can check the
 # lockfile extension requirements (ext-mongodb ^2.3 for mongodb/mongodb 2.3.0).
@@ -89,7 +89,7 @@ RUN php artisan package:discover --ansi \
 # --- Production runtime ---
 FROM base AS production
 
-WORKDIR /eportfolioAPI/app
+WORKDIR /eportfolioAPI/
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
@@ -116,6 +116,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 # The production stage's default working directory is the app root so
 # `php artisan serve` resolves the Laravel bootstrap files.
-WORKDIR /eportfolioAPI/app
+WORKDIR /eportfolioAPI/
 
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
