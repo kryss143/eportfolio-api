@@ -89,8 +89,6 @@ RUN php artisan package:discover --ansi \
 # --- Production runtime ---
 FROM base AS production
 
-WORKDIR /srv/app
-
 ENV APP_ENV=production \
     APP_DEBUG=false \
     APP_URL=http://localhost \
