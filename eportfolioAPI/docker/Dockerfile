@@ -37,8 +37,8 @@ RUN apk add --no-cache \
     && apk del --no-cache $PHPIZE_DEPS
 
 # --- Composer stage ---
-# Fixed to use the Alpine variant so 'apk add' doesn't crash
-FROM composer:latest-alpine AS composer
+# Composer image; alpine + PHP 8.3 matches composer.json "php": "^8.3"
+FROM php:8.3-cli-alpine AS composer
 
 WORKDIR /eportfolioAPI/
 
