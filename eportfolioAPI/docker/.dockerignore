@@ -1,0 +1,34 @@
+# Composer dependencies (the image bakes vendor/ in at build time)
+/vendor
+
+# Node/npm dependencies
+/node_modules
+
+# Environment / secrets
+.env
+.env.*
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Local dev artifacts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Artisan / config cache
+bootstrap/cache/*.json
+bootstrap/cache/*.php
+
+# Test coverage
+coverage/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
