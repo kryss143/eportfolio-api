@@ -71,7 +71,7 @@ ENV APP_ENV=${APP_ENV} \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1
 
-COPY --from=composer /srv/app/vendor /srv/app/vendor
+COPY --from=composer /eportfolioAPI/app/vendor /eportfolioAPI/app/vendor
 COPY . .
 
 # Laravel boilerplate that `composer install` creates from the installed
@@ -102,7 +102,7 @@ ENV APP_ENV=production \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1
 
-COPY --from=composer /srv/app/vendor /srv/app/vendor
+COPY --from=composer /eportfolioAPI/app/vendor /eportfolioAPI//app/vendor
 
 # Copy the compiled MongoDB + Redis extensions (and PHP config) from the
 # `base` stage into the production runtime image.
