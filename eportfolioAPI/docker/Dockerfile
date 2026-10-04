@@ -4,7 +4,6 @@
 FROM php:8.3-cli-alpine AS base
 
 # System libs required by the MongoDB PHP extension, intl, and the build tools.
-# (Added here because they are needed to compile the PECL extensions at build time.)
 RUN apk add --no-cache \
     $PHPIZE_DEPS \
     icu-dev \
@@ -21,6 +20,7 @@ RUN apk add --no-cache \
     libzip-dev \
     freetds-dev \
     unixodbc-dev \
+    curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure pdo_mysql \
     && docker-php-ext-configure pdo_pgsql \
@@ -31,26 +31,27 @@ RUN apk add --no-cache \
         opcache \
         pdo_mysql \
         pdo_pgsql \
-        zip
+        zip \
+    && pecl install mongodb redis \
+    && docker-php-ext-enable mongodb redis \
+    && apk del --no-cache $PHPIZE_DEPS
 
 # --- Composer stage ---
-FROM composer:latest AS composer
+# Fixed to use the Alpine variant so 'apk add' doesn't crash
+FROM composer:latest-alpine AS composer
 
 WORKDIR /eportfolioAPI/
 
-# Install the MongoDB PHP extension so `composer install` can check the
-# lockfile extension requirements (ext-mongodb ^2.3 for mongodb/mongodb 2.3.0).
-# The `base` stage has it compiled for Alpine, but the `composer` image is
-# Debian-based and doesn't, so we compile it here as well.
+# Re-compile dependencies for the composer container environment
 RUN apk add --no-cache $PHPIZE_DEPS icu-dev libxml2-dev oniguruma-dev zlib-dev \
     && pecl install mongodb redis \
     && docker-php-ext-enable mongodb redis \
-    && echo 'extension=mongodb.so' > /usr/local/etc/php/conf.d/docker-php-ext-mongodb.ini \
-    && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/docker-php-ext-redis.ini \
     && apk del --no-cache $PHPIZE_DEPS
 
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction --optimize-autoloader
+# Copy local composer configs (Adjust path to ./eportfolioAPI/ if your Dockerfile is in the root directory)
+COPY ./eportfolioAPI/composer.json ./eportfolioAPI/composer.lock ./
+# Fixed: Removed the trailing dash "-"
+RUN composer install --no-interaction --no-progress --optimize-autoloader --no-dev
 
 # --- Build stage ---
 FROM base AS build
@@ -59,23 +60,17 @@ ARG APP_ENV=production
 ARG APP_VERSION=1.0.0
 ARG GIT_COMMIT=unknown
 
-LABEL org.opencontainers.image.title="Laravel PHP App" \
-      org.opencontainers.image.version="${APP_VERSION}" \
-      org.opencontainers.image.revision="${GIT_COMMIT}" \
-      org.opencontainers.image.description="Docker image for deploying this Laravel/PostgreSQL app to Render"
+WORKDIR /eportfolioAPI/
 
 ENV APP_ENV=${APP_ENV} \
     APP_DEBUG=false \
-    APP_URL=http://localhost \
-    PHP_TELEMETRY_SILENT=1 \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1
 
 COPY --from=composer /eportfolioAPI/vendor /eportfolioAPI/vendor
-COPY . .
+# Copy the application source code (Adjust path if Dockerfile is outside eportfolioAPI subfolder)
+COPY ./eportfolioAPI .
 
-# Laravel boilerplate that `composer install` creates from the installed
-# packages, and the compiled frontend assets.
 RUN php artisan package:discover --ansi \
     && php artisan config:cache --ansi \
     && php artisan route:cache --ansi \
@@ -97,25 +92,25 @@ ENV APP_ENV=production \
     FILESYSTEM_DISK=local \
     QUEUE_CONNECTION=sync \
     CACHE_STORE=file \
-    SESSION_DRIVER=file \
-    PHP_TELEMETRY_SILENT=1 \
-    COMPOSER_ALLOW_SUPERUSER=1 \
-    COMPOSER_NO_INTERACTION=1
+    SESSION_DRIVER=file
 
+# 1. Copy dependencies
 COPY --from=composer /eportfolioAPI/vendor /eportfolioAPI/vendor
+# 2. Copy the actual compiled source code from the build stage (CRUCIAL FIX)
+COPY --from=build /eportfolioAPI /eportfolioAPI
 
-# Copy the compiled MongoDB + Redis extensions (and PHP config) from the
-# `base` stage into the production runtime image.
+# Copy compiled PHP extensions directly from the base build layer
 COPY --from=base /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=base /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+
+# Ensure permissions are correct for Laravel writing tasks
+RUN chown -R www-data:www-data /eportfolioAPI/storage /eportfolioAPI/bootstrap/cache
 
 USER www-data
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -fsS http://localhost/ || exit 1
+    CMD curl -fsS http://localhost:8080/ || exit 1
 
-# The production stage's default working directory is the app root so
-# `php artisan serve` resolves the Laravel bootstrap files.
-WORKDIR /eportfolioAPI/
+EXPOSE 8080
 
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
