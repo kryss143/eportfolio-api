@@ -89,7 +89,7 @@ RUN php artisan package:discover --ansi \
 # --- Production runtime ---
 FROM base AS production
 
-WORKDIR /srv/app
+WORKDIR /eportfolioAPI/app
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
@@ -116,6 +116,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 # The production stage's default working directory is the app root so
 # `php artisan serve` resolves the Laravel bootstrap files.
-WORKDIR /srv/app
+WORKDIR /eportfolioAPI/app
 
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
