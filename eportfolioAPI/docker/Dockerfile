@@ -71,7 +71,7 @@ ENV APP_ENV=${APP_ENV} \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1
 
-COPY --from=composer /eportfolioAPI/app/vendor /eportfolioAPI/app/vendor
+COPY --from=composer /eportfolioAPI/vendor /eportfolioAPI/vendor
 COPY . .
 
 # Laravel boilerplate that `composer install` creates from the installed
