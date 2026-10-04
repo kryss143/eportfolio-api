@@ -3,7 +3,7 @@
 # --- Base image: PHP 8.3 Alpine (runtime) ---
 FROM php:8.3-cli-alpine AS base
 
-# Build stage: compile production dependencies for the final image.
+# Build stage: install production dependencies for the final image.
 FROM composer:2 AS build-composer
 
 WORKDIR /app
@@ -11,42 +11,13 @@ WORKDIR /app
 # Copy composer config before installing so the lock file is honored.
 COPY composer.json composer.lock ./
 
-RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer 
-RUN composer install --no-interaction --no-progress --optimize-autoloader --no-dev --ignore-platform-req=ext-mongodb
-# System libs required by the MongoDB PHP extension, intl, and the build tools.
-RUN apk add --no-cache \
-    $PHPIZE_DEPS \
-    icu-dev \
-    libxml2-dev \
-    oniguruma-dev \
-    zlib-dev \
-    postgresql-dev \
-    freetype-dev \
-    libjpeg-turbo-dev \
-    libpng-dev \
-    libwebp-dev \
-    libxpm-dev \
-    libvpx-dev \
-    libzip-dev \
-    freetds-dev \
-    unixodbc-dev \
-    curl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-configure pdo_mysql \
-    && docker-php-ext-configure pdo_pgsql \
-    && docker-php-ext-configure pdo_dblib \
-    && docker-php-ext-install \
-        intl \
-        mbstring \
-        opcache \
-        pdo_mysql \
-        pdo_pgsql \
-        zip \
-    && pecl install mongodb redis \
-    && docker-php-ext-enable mongodb redis \
-    && apk del --no-cache $PHPIZE_DEPS
+# Install dependencies with BuildKit's cache mount.
+# --ignore-platform-req=ext-mongodb keeps the composer stage building while the
+# mongodb extension is installed in the later base production stage.
+RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer \
+    composer install --no-interaction --no-progress --optimize-autoloader --no-dev --no-scripts --ignore-platform-req=ext-mongodb
 
-# --- Build stage ---
+# --- Build stage: compile and cache the application ---
 FROM base AS build
 
 ARG APP_ENV=production
@@ -89,10 +60,10 @@ ENV APP_ENV=production \
 
 # 1. Copy dependencies
 COPY --from=build-composer /app/vendor /app/vendor
-# 2. Copy the actual compiled source code from the build stage
+# 2. Copy the compiled application from the build stage
 COPY --from=build /app /app
 
-# Copy compiled PHP extensions directly from the base build layer
+# Copy compiled PHP extensions from the base build layer
 COPY --from=base /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=base /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
