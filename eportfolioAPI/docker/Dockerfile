@@ -11,7 +11,6 @@ RUN apk add --no-cache \
     libxml2-dev \
     oniguruma-dev \
     zlib-dev \
-    mariadb-connector-c-dev \
     postgresql-dev \
     freetype-dev \
     libjpeg-turbo-dev \
@@ -23,7 +22,7 @@ RUN apk add --no-cache \
     freetds-dev \
     unixodbc-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-configure pdo_mysql --with-mariadb \
+    && docker-php-ext-configure pdo_mysql \
     && docker-php-ext-configure pdo_pgsql \
     && docker-php-ext-configure pdo_dblib --with-freetds \
     && docker-php-ext-install \
@@ -32,7 +31,6 @@ RUN apk add --no-cache \
         opcache \
         pdo_mysql \
         pdo_pgsql \
-        pdo_dblib \
         zip
 
 # --- Composer stage ---
