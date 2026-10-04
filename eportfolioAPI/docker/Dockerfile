@@ -24,7 +24,7 @@ RUN apk add --no-cache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure pdo_mysql \
     && docker-php-ext-configure pdo_pgsql \
-    && docker-php-ext-configure pdo_dblib --with-freetds \
+    && docker-php-ext-configure pdo_dblib
     && docker-php-ext-install \
         intl \
         mbstring \
@@ -45,6 +45,8 @@ WORKDIR /srv/app
 RUN apk add --no-cache $PHPIZE_DEPS icu-dev libxml2-dev oniguruma-dev zlib-dev \
     && pecl install mongodb redis \
     && docker-php-ext-enable mongodb redis \
+    && echo 'extension=mongodb.so' > /usr/local/etc/php/conf.d/docker-php-ext-mongodb.ini \
+    && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/docker-php-ext-redis.ini \
     && apk del --no-cache $PHPIZE_DEPS
 
 COPY composer.json composer.lock ./
