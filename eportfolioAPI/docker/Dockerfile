@@ -49,7 +49,7 @@ RUN apk add --no-cache $PHPIZE_DEPS icu-dev libxml2-dev oniguruma-dev zlib-dev \
     && apk del --no-cache $PHPIZE_DEPS
 
 # Copy local composer configs (Adjust path to ./eportfolioAPI/ if your Dockerfile is in the root directory)
-COPY ./eportfolioAPI/composer.json ./eportfolioAPI/composer.lock ./
+COPY ./composer.json ./composer.lock ./
 # Fixed: Removed the trailing dash "-"
 RUN composer install --no-interaction --no-progress --optimize-autoloader --no-dev
 
@@ -68,8 +68,8 @@ ENV APP_ENV=${APP_ENV} \
     COMPOSER_NO_INTERACTION=1
 
 COPY --from=composer /eportfolioAPI/vendor /eportfolioAPI/vendor
-# Copy the application source code (Adjust path if Dockerfile is outside eportfolioAPI subfolder)
-COPY ./eportfolioAPI .
+# Copy the application source code
+COPY . .
 
 RUN php artisan package:discover --ansi \
     && php artisan config:cache --ansi \
