@@ -1,12 +1,12 @@
-ARG PHP_VERSION=8.3-cli
+# syntax=docker/dockerfile:1
 
-FROM php:${PHP_VERSION}-alpine AS base
+# --- Base image: PHP 8.3 Alpine (runtime) ---
+FROM php:8.3-cli-alpine AS base
 
-# System libs required by the MongoDB PHP extension, intl, and the build tools
-# Laravel `optimize` scripts rely on these while `composer install` runs.
+# System libs required by the MongoDB PHP extension, intl, and the build tools.
+# (Added here because they are needed to compile the PECL extensions at build time.)
 RUN apk add --no-cache \
     $PHPIZE_DEPS \
-    curl \
     icu-dev \
     libxml2-dev \
     oniguruma-dev \
@@ -22,15 +22,6 @@ RUN apk add --no-cache \
     libzip-dev \
     freetds-dev \
     unixodbc-dev \
-    || true
-
-# Install PHP extensions explicitly via PECL so the final image contains
-# everything the app needs, independent of what Alpine preinstalls.
-RUN pecl install \
-    mongodb \
-    redis \
-    xdebug \
-    && docker-php-ext-enable mongodb redis xdebug \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure pdo_mysql --with-mariadb \
     && docker-php-ext-configure pdo_pgsql \
@@ -42,23 +33,17 @@ RUN pecl install \
         pdo_mysql \
         pdo_pgsql \
         pdo_dblib \
-        zip \
-    && docker-zenv -o /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
-        zend_extension=xdebug.so \
-        xdebug.mode=off \
-        xdebug.start_with_request=noop
+        zip
 
-# --- Composer ---
+# --- Composer stage ---
 FROM composer:latest AS composer
 
 WORKDIR /srv/app
 
-# Install the exact locked dependency tree in one step so the composer.lock
-# hash drives the image cache. `composer install` errors out if lock is missing.
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction --optimize-autoloader
 
-# --- Build the app ---
+# --- Build stage ---
 FROM base AS build
 
 ARG APP_ENV=production
@@ -77,7 +62,6 @@ ENV APP_ENV=${APP_ENV} \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1
 
-# Dependencies (production only) + the rest of the repo.
 COPY --from=composer /srv/app/vendor /srv/app/vendor
 COPY . .
 
@@ -92,7 +76,6 @@ RUN php artisan package:discover --ansi \
         storage/framework/cache/data \
         storage/logs/*.log \
         tests \
-        vendor/bin
 
 # --- Production runtime ---
 FROM base AS production
@@ -110,17 +93,12 @@ ENV APP_ENV=production \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1
 
-# Runtime-only deps (no build tooling, no dev packages).
 COPY --from=composer /srv/app/vendor /srv/app/vendor
 
-# Bring in the compiled assets from the build stage.
-COPY --from=build /srv/app/public/build /srv/app/public/build
-COPY --from=build /srv/app/public/mix-manifest.json /srv/app/public/mix-manifest.json
-COPY --from=build /srv/app/storage /srv/app/storage
-
-COPY --from=build --chown=www-data:www-data /srv/app/public/.well-known /srv/app/public/.well-known
-COPY --from=build --chown=www-data:www-data /srv/app/public/index.php /srv/app/public/index.php
-COPY --from=build --chown=www-data:www-data /srv/app/public/robots.txt /srv/app/public/robots.txt
+# Copy compiled PECL binaries straight into the extension directory.
+# No pecl, no xdebug, and no Alpine dev libs are needed in this stage.
+COPY --from=base /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=base /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
 USER www-data
 
