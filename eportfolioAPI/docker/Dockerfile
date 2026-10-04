@@ -84,7 +84,7 @@ RUN php artisan package:discover --ansi \
         database/*.sqlite \
         storage/framework/cache/data \
         storage/logs/*.log \
-        tests \
+        tests
 
 # --- Production runtime ---
 FROM base AS production
