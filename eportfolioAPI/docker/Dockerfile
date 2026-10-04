@@ -11,9 +11,7 @@ WORKDIR /app
 # Copy composer config before installing so the lock file is honored.
 COPY composer.json composer.lock ./
 
-RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer \
-    composer install --no-interaction --no-progress --optimize-autoloader --no-dev
-
+RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer composer install --no-interaction --no-progress --optimize-autoloader --no-dev
 # System libs required by the MongoDB PHP extension, intl, and the build tools.
 RUN apk add --no-cache \
     $PHPIZE_DEPS \
