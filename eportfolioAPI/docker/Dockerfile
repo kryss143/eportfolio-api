@@ -24,7 +24,7 @@ RUN apk add --no-cache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure pdo_mysql \
     && docker-php-ext-configure pdo_pgsql \
-    && docker-php-ext-configure pdo_dblib
+    && docker-php-ext-configure pdo_dblib \
     && docker-php-ext-install \
         intl \
         mbstring \
