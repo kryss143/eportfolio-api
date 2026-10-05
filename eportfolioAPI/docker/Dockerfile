@@ -35,6 +35,9 @@ COPY --from=build-composer /app/vendor /app/vendor
 # Copy the application source code
 COPY . .
 
+# Build the frontend (Vite -> public/build)
+RUN npm ci && npm run build
+
 RUN php artisan package:discover --ansi \
     && php artisan config:cache --ansi \
     && php artisan route:cache --ansi \
