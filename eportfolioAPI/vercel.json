@@ -1,0 +1,15 @@
+{
+  "$schema": "https://open.vercel.com/configuration.json",
+  "version": 3,
+  "outputDirectory": "",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm ci",
+  "framework": "other",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.php"
+    }
+  ]
+}
