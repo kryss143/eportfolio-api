@@ -1,5 +1,4 @@
 {
-  "$schema": "https://open.vercel.com/configuration.json",
   "version": 2,
   "outputDirectory": "",
   "buildCommand": "npm run build",
