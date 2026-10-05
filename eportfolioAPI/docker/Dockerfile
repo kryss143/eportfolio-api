@@ -17,8 +17,8 @@ COPY composer.json composer.lock ./
 RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer \
     composer install --no-interaction --no-progress --optimize-autoloader --no-dev --no-scripts --ignore-platform-req=ext-mongodb
 
-# --- Build stage: compile and cache the application ---
-FROM base AS build
+# --- Build stage: compile the frontend ---
+FROM node:20-alpine AS build
 
 ARG APP_ENV=production
 ARG APP_VERSION=1.0.0
@@ -38,16 +38,6 @@ COPY . .
 # Build the frontend (Vite -> public/build)
 RUN npm ci && npm run build
 
-RUN php artisan package:discover --ansi \
-    && php artisan config:cache --ansi \
-    && php artisan route:cache --ansi \
-    && php artisan view:cache --ansi \
-    && rm -rf \
-        database/*.sqlite \
-        storage/framework/cache/data \
-        storage/logs/*.log \
-        tests
-
 # --- Production runtime ---
 FROM base AS production
 
@@ -61,9 +51,9 @@ ENV APP_ENV=production \
     CACHE_STORE=file \
     SESSION_DRIVER=file
 
-# 1. Copy dependencies
+# 1. Copy Composer dependencies
 COPY --from=build-composer /app/vendor /app/vendor
-# 2. Copy the compiled application from the build stage
+# 2. Copy the compiled application and built frontend from the build stage
 COPY --from=build /app /app
 
 # Copy compiled PHP extensions from the base build layer
