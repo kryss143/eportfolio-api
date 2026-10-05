@@ -1,9 +1,32 @@
 # syntax=docker/dockerfile:1
 
-# --- Base image: PHP 8.3 Alpine (runtime) ---
+# --- Base image: PHP 8.3 Alpine (runtime + build deps) ---
 FROM php:8.3-cli-alpine AS base
 
-# Build stage: install production dependencies for the final image.
+# Install system deps required by Laravel, Composer, and the MongoDB/Redis
+# PHP extensions (the ones your composer.json/lockfile expects).
+RUN apk add --no-cache \
+    nginx \
+    curl \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libxml2-dev \
+   icu-dev \
+    postgresql-dev \
+    zlib-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j "$(nproc)" \
+        pdo_mysql \
+        mysqli \
+        pdo_pgsql \
+        zip \
+        exif \
+        pcntl \
+        bcmath \
+    && docker-php-ext-enable pdo_mysql mysqli pdo_pgsql zip exif pcntl bcmath
+
+# Build stage: install Composer.
 FROM composer:2 AS build-composer
 
 WORKDIR /app
@@ -17,7 +40,7 @@ COPY composer.json composer.lock ./
 RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer \
     composer install --no-interaction --no-progress --optimize-autoloader --no-dev --no-scripts --ignore-platform-req=ext-mongodb
 
-# --- Build stage: compile the frontend ---
+# --- Build stage: compile the frontend (Vite -> public/build) ---
 FROM node:20-alpine AS build
 
 ARG APP_ENV=production
@@ -61,13 +84,21 @@ COPY --from=base /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=base /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
 # Ensure permissions are correct for Laravel writing tasks
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
+RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
+    mkdir -p /var/www/storage/framework/views /var/www/storage/logs && \
+    chown -R www-data:www-data /var/www /var/www/storage /var/www/bootstrap/cache
 
-USER www-data
+# 1. Copy Nginx site config
+COPY docker/nginx.conf /etc/nginx/nginx.conf
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -fsS http://localhost:8080/ || exit 1
+# 2. Remove the stock Nginx site that tries to serve /usr/share/nginx/html
+RUN rm -f /etc/nginx/conf.d/default.conf
 
-EXPOSE 8080
+# 3. Make the Laravel public dir the Nginx web root
+RUN ln -sf /app/public /var/www/html
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
+# 4. Start Nginx (serves static assets + proxies PHP) and PHP built-in server
+#    Nginx listens on 8080 (Render's port).
+#    PHP built-in server runs on 127.0.0.1:9000 and handles /index.php.
+CMD ["sh", "-c", "php artisan serve --host=127.0.0.1 --port=9000 --no-reload & \
+    nginx -g 'daemon off;'"]
