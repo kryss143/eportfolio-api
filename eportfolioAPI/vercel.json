@@ -1,7 +1,10 @@
 {
   "$schema": "https://open.vercel.com/configuration.json",
   "version": 2,
-  "framework": "container",
+  "outputDirectory": "public",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "framework": "other",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -9,4 +12,3 @@
     }
   ]
 }
-
