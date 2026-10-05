@@ -4,7 +4,7 @@
   "outputDirectory": "public",
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
-  "framework": "other",
+  "framework": "container",
   "rewrites": [
     {
       "source": "/(.*)",
