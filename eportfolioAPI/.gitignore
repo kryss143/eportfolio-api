@@ -1,6 +1,5 @@
 *.log
 .DS_Store
-.env
 .env.backup
 .env.production
 .env.example
@@ -27,3 +26,5 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
+# Prevent .env files in any subdirectory
+.env
