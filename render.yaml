@@ -1,0 +1,25 @@
+# Render service configuration for the Laravel + MongoDB app.
+#
+# Push this file to the repo root and Render will auto-detect it and set up:
+#   - a Web service (Docker build + start command)
+#   - the environment variables (sensitive ones marked as SECRETS)
+
+services:
+  - type: web
+    name: eportfolio-api
+    runtime: docker
+    env: docker
+    dockerfilePath: docker/Dockerfile
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+
+  # Optional: queue worker service (uncomment to enable).
+  # - type: worker
+  #   name: eportfolio-api-worker
+  #   runtime: docker
+  #   startCommand: php artisan queue:work --tries=3 --timeout=300
+  #   envVars:
+  #     - key: APP_KEY
+  #       value: base64:your-32-byte-app-key-here
+  #     - key: MONGODB_URI
+  #       sync: false
+  #       value: mongodb+srv://<db_username>:<db_password>@<cluster-host>/eportfolio?appName=eportfolio-api
