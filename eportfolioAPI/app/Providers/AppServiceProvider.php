@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\TechSkill;
 use App\Observers\ActivityObserver;
 use App\Support\MongoProbe;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,6 +22,15 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Bug (2026-10-07): when a request arrives as /index.php/* (e.g. nginx
+        // try_files fallback), Laravel's URI root keeps an "index.php" segment
+        // and generated links become /index.php/admin/login — which our nginx
+        // then mishandled, landing on the home page. Canonicalize to the bare
+        // request root so every url()/route() link is index.php-free.
+        if (str_contains(request()->getRequestUri(), '/index.php')) {
+            URL::forceRootUrl(rtrim(str_replace('/index.php', '', request()->getSchemeAndHttpHost() . request()->getBasePath()), '/'));
+        }
+
         // Computed lazily, only when an admin view renders, and memoized per
         // request so controllers, index-view action guards and the banners
         // share one availability probe. Bug #4: index views use these to hide
