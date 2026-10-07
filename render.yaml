@@ -9,7 +9,7 @@ services:
     name: eportfolio-api
     runtime: docker
     env: docker
-    dockerfilePath: docker/Dockerfile
+    dockerfilePath: eportfolioAPI/docker/Dockerfile
     startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
 
   # Optional: queue worker service (uncomment to enable).
