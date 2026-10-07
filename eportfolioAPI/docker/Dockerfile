@@ -15,6 +15,7 @@ RUN apk add --no-cache \
     icu-dev \
     postgresql-dev \
     zlib-dev \
+    libzip-dev \
     && docker-php-ext-install -j "$(nproc)" \
         gd \
         pdo_mysql \
@@ -69,6 +70,9 @@ WORKDIR /app
 ENV APP_ENV=production \
     APP_DEBUG=false \
     APP_URL=http://localhost \
+    APP_KEY=base64:dummy \
+    DB_CONNECTION=sqlite \
+    DB_DATABASE=/tmp/database.sqlite \
     FILESYSTEM_DISK=local \
     QUEUE_CONNECTION=sync \
     CACHE_STORE=file \
@@ -84,9 +88,10 @@ COPY --from=base /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=base /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 
 # Ensure permissions are correct for Laravel writing tasks
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
-    mkdir -p /var/www/storage/framework/views /var/www/storage/logs && \
-    chown -R www-data:www-data /var/www /var/www/storage /var/www/bootstrap/cache
+RUN mkdir -p /app/storage /app/bootstrap/cache \
+    /var/www/storage/framework/views /var/www/storage/logs /var/www/bootstrap/cache && \
+    chown -R www-data:www-data /app/storage /app/bootstrap/cache \
+    /var/www/storage /var/www/bootstrap/cache
 
 # 1. Copy Nginx site config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -95,7 +100,7 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 RUN rm -f /etc/nginx/conf.d/default.conf
 
 # 3. Make the Laravel public dir the Nginx web root
-RUN ln -sf /app/public /var/www/html
+RUN rm -rf /var/www/html && ln -sf /app/public /var/www/html
 
 # 4. Start Nginx (serves static assets + proxies PHP) and PHP built-in server
 #    Nginx listens on 8080 (Render's port).

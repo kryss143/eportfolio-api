@@ -32,3 +32,6 @@ coverage/
 *.swp
 *.swo
 *~
+
+# Docker build files (Dockerfile + nginx.conf are needed at build time)
+# docker/  # uncommented: Dockerfile and nginx.conf must be accessible
