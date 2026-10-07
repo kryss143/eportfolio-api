@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use MongoDB\Driver\Exception\AuthenticationException;
+use MongoDB\Driver\Exception\ConnectionException;
+use MongoDB\Driver\Exception\RuntimeException as MongoRuntimeException;
 
 class AuthController extends Controller
 {
@@ -20,19 +23,24 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        // Audit post-mongo Bug 3 (2026-09-28): the role check is part of the
-        // credential query, not a post-attempt branch. The previous flow
-        // attempt() → check is_admin → logout + distinct "You do not have
-        // admin access" error confirmed password validity to anyone probing
-        // /admin/login with a valid non-admin account (free credential
-        // oracle). Folding 'is_admin' into attempt() makes wrong-role take
-        // the identical generic-failure path — note the boolean: Mongo
-        // compares strictly, and the stored flag is a real bool, so int 1
-        // would never match (verified live).
-        if (Auth::attempt($credentials + ['is_admin' => true], $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        try {
+            // Audit post-mongo Bug 3 (2026-09-28): the role check is part of the
+            // credential query, not a post-attempt branch. The previous flow
+            // attempt() → check is_admin → logout + distinct "You do not have
+            // admin access" error confirmed password validity to anyone probing
+            // /admin/login with a valid non-admin account (free credential
+            // oracle). Folding 'is_admin' into attempt() makes wrong-role take
+            // the identical generic-failure path — note the boolean: Mongo
+            // compares strictly, and the stored flag is a real bool, so int 1
+            // would never match (verified live).
+            if (Auth::attempt($credentials + ['is_admin' => true], $request->boolean('remember'))) {
+                $request->session()->regenerate();
 
-            return redirect()->intended(route('admin.dashboard'));
+                return redirect()->intended(route('admin.dashboard'));
+            }
+        } catch (ConnectionException|AuthenticationException|MongoRuntimeException $e) {
+            // MongoDB Atlas connectivity / auth failures should not expose
+            // internals or 500 — fall through to the generic credential error.
         }
 
         return back()->withErrors([
