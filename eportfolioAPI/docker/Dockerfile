@@ -12,11 +12,11 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     freetype-dev \
     libxml2-dev \
-   icu-dev \
+    icu-dev \
     postgresql-dev \
     zlib-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j "$(nproc)" \
+        gd \
         pdo_mysql \
         mysqli \
         pdo_pgsql \
