@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => IsAdmin::class,
         ]);
 
+        $middleware->append(App\Http\Middleware\TrustProxies::class);
+
         // Authenticated users hitting a "guest"-only route (admin/login) are
         // sent to the dashboard instead of falling back to "/" (bug #7).
         $middleware->redirectUsersTo(fn () => route('admin.dashboard'));
