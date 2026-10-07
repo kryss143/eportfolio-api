@@ -70,7 +70,7 @@ WORKDIR /app
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
-    APP_URL=http://localhost \
+    APP_URL=https://eportfolio-api-4j67.onrender.com \
     APP_KEY=base64:dummy \
     DB_CONNECTION=sqlite \
     DB_DATABASE=/tmp/database.sqlite \
