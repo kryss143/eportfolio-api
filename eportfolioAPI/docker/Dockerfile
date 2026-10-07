@@ -5,6 +5,9 @@ FROM php:8.3-cli-alpine AS base
 
 # Install system deps required by Laravel, Composer, and the MongoDB/Redis
 # PHP extensions (the ones your composer.json/lockfile expects).
+# $PHPIZE_DEPS + openssl-dev are needed to build ext-mongodb via pecl; without
+# it every Mongo query dies with `Class "MongoDB\\Driver\\Manager" not found`
+# (an uncatchable PHP Error, so the API's degraded-mode fallbacks never fire).
 RUN apk add --no-cache \
     nginx \
     curl \
@@ -17,6 +20,8 @@ RUN apk add --no-cache \
     postgresql-dev \
     zlib-dev \
     libzip-dev \
+    $PHPIZE_DEPS \
+    openssl-dev \
     && docker-php-ext-install -j "$(nproc)" \
         gd \
         pdo_mysql \
@@ -26,7 +31,9 @@ RUN apk add --no-cache \
         exif \
         pcntl \
         bcmath \
-    && docker-php-ext-enable pdo_mysql mysqli pdo_pgsql zip exif pcntl bcmath
+    && docker-php-ext-enable pdo_mysql mysqli pdo_pgsql zip exif pcntl bcmath \
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb
 
 # Build stage: install Composer.
 FROM composer:2 AS build-composer
@@ -38,7 +45,8 @@ COPY composer.json composer.lock ./
 
 # Install dependencies with BuildKit's cache mount.
 # --ignore-platform-req=ext-mongodb keeps the composer stage building while the
-# mongodb extension is installed in the later base production stage.
+# mongodb extension is compiled into the base image (pecl) and available in the
+# production runtime stage.
 RUN --mount=type=cache,id=composer-cache,target=/root/.cache/composer \
     composer install --no-interaction --no-progress --optimize-autoloader --no-dev --no-scripts --ignore-platform-req=ext-mongodb
 
@@ -72,12 +80,16 @@ ENV APP_ENV=production \
     APP_DEBUG=false \
     APP_URL=https://eportfolio-api-4j67.onrender.com \
     APP_KEY=base64:dummy \
-    DB_CONNECTION=sqlite \
-    DB_DATABASE=/tmp/database.sqlite \
     FILESYSTEM_DISK=local \
     QUEUE_CONNECTION=sync \
     CACHE_STORE=file \
     SESSION_DRIVER=file
+# Deliberately NO DB_CONNECTION default: config/database.php falls back to
+# 'mongodb', which is what the app (user model, guards, all collections)
+# requires — forcing sqlite here made every Mongo-backed query (e.g. the
+# admin login POST) crash with "SQLiteConnection::getCollection does not
+# exist" instead of connecting to the MONGODB_URI provided by the host.
+# Provide real credentials (e.g. MONGODB_URI) via the environment at deploy.
 
 # 1. Copy Composer dependencies
 COPY --from=build-composer /app/vendor /app/vendor
