@@ -126,16 +126,17 @@
         </div>
 
         <div class="flex items-center justify-between">
-            <form method="POST" action="{{ route('admin.projects.destroy', $project) }}" onsubmit="return confirm('Delete this project permanently?')">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">Delete project</button>
-            </form>
             <div class="flex items-center gap-3">
                 <a href="{{ route('admin.projects.index') }}" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</a>
-                <button type="submit" form="edit-form" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">Save changes</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">Save changes</button>
             </div>
         </div>
+    </form>
+
+    <form method="POST" action="{{ route('admin.projects.destroy', $project) }}" onsubmit="return confirm('Delete this project permanently?')">
+        @csrf
+        @method('DELETE')
+        <button type="submit" class="mt-4 w-full px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">Delete project</button>
     </form>
 </div>
 @endsection
