@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Base image: PHP 8.3 Alpine (runtime + build deps) ---
-FROM php:8.3-cli-alpine AS base
+FROM php:8.3.36-cli-alpine AS base
 
 # Install system deps required by Laravel, Composer, and the MongoDB/Redis
 # PHP extensions (the ones your composer.json/lockfile expects).
